@@ -23,6 +23,12 @@ namespace DataLayer.Models
         public string Phone { get; set; }
 
         [Required]
+        public string Platoon { get; set; }
+
+        [Required]
+        public string Company { get; set; }
+
+        [Required]
         public Position Position { get; set; } = new Position();
 
         public virtual ICollection<SoldierMission> Missions { get; set; } = new HashSet<SoldierMission>();
