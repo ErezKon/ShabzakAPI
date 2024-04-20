@@ -1,0 +1,33 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Translators.Models;
+
+namespace Translators.Translators
+{
+    public abstract class MissionPositionTranslator
+    {
+        public static MissionPosition ToBL(DataLayer.Models.MissionPositions mp)
+        {
+            return new MissionPosition()
+            {
+                Id = mp.Id,
+                Position = (Position) Enum.Parse(typeof(Position), mp.Position.ToString()),
+                Count = mp.Count,
+            };
+        }
+
+
+        public static DataLayer.Models.MissionPositions ToDB(MissionPosition mp)
+        {
+            return new DataLayer.Models.MissionPositions()
+            {
+                Id = mp.Id,
+                Position = (DataLayer.Models.Position)Enum.Parse(typeof(DataLayer.Models.Position), mp.Position.ToString()),
+                Count = mp.Count
+            };
+        }
+    }
+}
