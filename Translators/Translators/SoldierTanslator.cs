@@ -19,6 +19,16 @@ namespace Translators.Translators
                 Phone = sol.Phone,
                 Platoon = sol.Platoon,
                 Company = sol.Company,
+                Positions = sol.Position.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s =>
+                    {
+                        if(int.TryParse(s, out int numericValue))
+                        {
+                            return (Position)numericValue;
+                        }
+                        return Position.Simple;
+                    })
+                    .ToList(),
                 Vacations = sol.Vacations?
                 .Select(v => VacationTranslator.ToBL(v))
                 .ToList()
@@ -37,6 +47,7 @@ namespace Translators.Translators
                 Phone = sol.Phone,
                 Platoon = sol.Platoon,
                 Company = sol.Company,
+                Position = string.Join(",", sol.Positions.Select(p => ((int)p).ToString()).ToArray()),
                 Vacations = sol.Vacations?
                 .Select(v => VacationTranslator.ToDB(v))
                 .ToList()

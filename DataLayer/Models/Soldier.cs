@@ -29,7 +29,7 @@ namespace DataLayer.Models
         public string Company { get; set; }
 
         [Required]
-        public Position Position { get; set; } = new Position();
+        public string Position { get; set; }
 
         public virtual ICollection<SoldierMission> Missions { get; set; } = new HashSet<SoldierMission>();
 
