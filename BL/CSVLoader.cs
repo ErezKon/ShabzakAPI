@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BL.Extensions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -136,7 +137,8 @@ namespace BL
                             continue;
                         }
                     }
-                    db.Soldiers.Add(soldier);
+                    soldier.Company = "C";
+                    db.Soldiers.Add(soldier.Encrypt());
                 }
                 db.SaveChanges();
             }

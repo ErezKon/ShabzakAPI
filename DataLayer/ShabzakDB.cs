@@ -20,8 +20,11 @@ namespace DataLayer
         {
             if (!optionsBuilder.IsConfigured)
             {
-                var connectionString = @"Server=localhost\SQLEXPRESS;Database=ShabzakDB;Trusted_Connection=True;";
-                optionsBuilder.UseSqlServer(connectionString);
+                var connectionString = @"Data Source=W11JZYGKG3\SQLEXPRESS;Initial Catalog=ShabzakDB;Integrated Security=True;Multiple Active Result Sets=True;Trust Server Certificate=True;Packet Size=16000;";
+                optionsBuilder.UseSqlServer(connectionString, builder => { 
+                    builder.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
+                });
+                base.OnConfiguring(optionsBuilder);
             }
         }
 
@@ -84,15 +87,19 @@ namespace DataLayer
 
                 entity.HasOne(e => e.Mission)
                     .WithMany(e => e.SoldierMissions)
-                    .HasForeignKey(e => e.MissionId);
+                    .HasForeignKey(e => e.SoldierId)
+                    .HasForeignKey(e => e.MissionId)
+                    .OnDelete(DeleteBehavior.NoAction);
 
                 entity.HasOne(e => e.Soldier)
                     .WithMany(e => e.Missions)
-                    .HasForeignKey(e => e.MissionId);
+                    .HasForeignKey(e => e.MissionId)
+                    .OnDelete(DeleteBehavior.NoAction);
 
                 entity.HasOne(e => e.MissionPosition)
                     .WithMany(e => e.Soldiers)
-                    .HasForeignKey(e => e.MissionId);
+                    .HasForeignKey(e => e.MissionId)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
 
             modelBuilder.Entity<MissionPositions>(entity =>
