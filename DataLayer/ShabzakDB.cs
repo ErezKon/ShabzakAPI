@@ -20,8 +20,8 @@ namespace DataLayer
         {
             if (!optionsBuilder.IsConfigured)
             {
-                var connectionString = @"";
-                optionsBuilder.UseSqlServer(@"");
+                var connectionString = @"Server=localhost\SQLEXPRESS;Database=ShabzakDB;Trusted_Connection=True;";
+                optionsBuilder.UseSqlServer(connectionString);
             }
         }
 
@@ -127,10 +127,15 @@ namespace DataLayer
                     .IsRequired();
 
                 entity.HasOne(e => e.Soldier)
-                    .WithMany(e => e.Vacation)
+                    .WithMany(e => e.Vacations)
                     .HasForeignKey(e => e.SoldierId);
             });
-
         }
+
+        public DbSet<Soldier> Soldiers { get; set; }
+        public DbSet<Mission> Missions { get; set; }
+        public DbSet<MissionPositions> MissionPositions { get; set; }
+        public DbSet<SoldierMission> SoldierMission { get; set; }
+        public DbSet<Vacation> Vacations { get; set; }
     }
 }
