@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "02.Translators", "Translato
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "03.BL", "BL\03.BL.csproj", "{02A3F5AD-FAD9-4F16-8000-7749414DA3C7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "04.ShabzakAPI", "04.ShabzakAPI\04.ShabzakAPI.csproj", "{B0240862-6A0D-46A2-8287-37F8448271F8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{02A3F5AD-FAD9-4F16-8000-7749414DA3C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{02A3F5AD-FAD9-4F16-8000-7749414DA3C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{02A3F5AD-FAD9-4F16-8000-7749414DA3C7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0240862-6A0D-46A2-8287-37F8448271F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0240862-6A0D-46A2-8287-37F8448271F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0240862-6A0D-46A2-8287-37F8448271F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0240862-6A0D-46A2-8287-37F8448271F8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

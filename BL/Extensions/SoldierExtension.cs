@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Translators.Models;
+using Translators.Translators;
 
 namespace BL.Extensions
 {
@@ -102,5 +103,8 @@ namespace BL.Extensions
             soldier.PersonalNumber = encryptor.DecryptAES(soldier.PersonalNumber);
             return soldier;
         }
+
+        public static Soldier ToBL(this DataLayer.Models.Soldier soldier) => SoldierTanslator.ToBL(soldier);
+        public static DataLayer.Models.Soldier ToDB(this Soldier soldier) => SoldierTanslator.ToDB(soldier);
     }
 }

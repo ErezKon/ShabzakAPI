@@ -1,0 +1,43 @@
+﻿using BL.Extensions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Translators.Models;
+
+namespace BL.Services
+{
+    public class SoldierService
+    {
+        public Soldier AddSoldier(Soldier soldier)
+        {
+            return AddSoldier(soldier.ToDB());
+        }
+
+        public Soldier AddSoldier(DataLayer.Models.Soldier soldier)
+        {
+            using var db = new DataLayer.ShabzakDB();
+            db.Soldiers.Add(soldier.Encrypt());
+            return soldier.Decrypt().ToBL();
+        }
+        public Soldier Update(Soldier soldier) => Update(soldier.ToDB());
+        public Soldier Update(DataLayer.Models.Soldier soldier)
+        {
+            using var db = new DataLayer.ShabzakDB();
+            var sol = db.Soldiers
+                .FirstOrDefault(s => s.Id == soldier.Id) 
+                ?? throw new ArgumentException("Soldier not found.");
+
+            sol.Name = soldier.Name;
+            sol.Phone = soldier.Phone;
+            sol.Position = soldier.Position;
+            sol.Company = soldier.Company;
+            sol.PersonalNumber = soldier.PersonalNumber;
+            sol.Platoon = soldier.Platoon;
+            sol.Encrypt();
+            db.SaveChanges();
+            return sol.Decrypt().ToBL();
+        }
+    }
+}
