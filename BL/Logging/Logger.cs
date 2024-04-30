@@ -28,10 +28,18 @@ namespace BL.Logging
                 var level = lvl == LogLevel.Info ? "[I]" : lvl == LogLevel.Warning ? "[W]" : "[E]";
                 var msg = $"[ShinyBot] {stamp} {level} - {message}\n";
 
-                File.AppendAllText(logFileName, msg);
-                Console.ForegroundColor = color;
-                Console.WriteLine(msg);
-                Console.ForegroundColor = ConsoleColor.Gray;
+                try
+                {
+                    File.AppendAllText(logFileName, msg);
+                    Console.ForegroundColor = color;
+                    Console.WriteLine(msg);
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error in writing to log:\n {ex.ToString()}");
+                    throw;
+                }
             }
         }
     }
