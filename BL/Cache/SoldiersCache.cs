@@ -1,4 +1,5 @@
 ﻿using BL.Extensions;
+using BL.Log;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +17,7 @@ namespace BL.Cache
         public static IEnumerable<DataLayer.Models.Soldier> DbSoldiers { get; private set; }
         private SoldiersCache() 
         {
+            Logger.Log("Creating Soldier Cache");
             var timer = new Timer(state =>
             {
                 ReloadCache();
@@ -33,6 +35,8 @@ namespace BL.Cache
             Soldiers = DbSoldiers
                 .Select(s => SoldierTanslator.ToBL(s))
                 .ToList();
+
+            Logger.Log($"Loaded {Soldiers.Count()} soldiers to cache");
         }
 
         public static SoldiersCache GetInstance()

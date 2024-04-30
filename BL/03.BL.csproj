@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DataLayer\01.DataLayer.csproj" />
     <ProjectReference Include="..\Translators\02.Translators.csproj" />
   </ItemGroup>
