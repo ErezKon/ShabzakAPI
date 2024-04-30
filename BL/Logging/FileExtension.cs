@@ -26,7 +26,9 @@ namespace BL.Logging
             }
             catch (Exception ex)
             {
+                Console.WriteLine();
                 Console.WriteLine($"Error in creating log file:\n{ex.ToString()}");
+                Console.WriteLine();
             }
         }
     }

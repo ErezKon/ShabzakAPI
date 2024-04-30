@@ -37,8 +37,9 @@ namespace BL.Logging
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error in writing to log:\n {ex.ToString()}");
-                    throw;
+                    Console.WriteLine();
+                    Console.WriteLine($"Error in writing to log:\n {ex}");
+                    Console.WriteLine();
                 }
             }
         }
