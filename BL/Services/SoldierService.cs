@@ -1,6 +1,6 @@
 ﻿using BL.Cache;
 using BL.Extensions;
-using BL.Log;
+using BL.Logging;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;

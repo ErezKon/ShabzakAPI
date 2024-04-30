@@ -1,5 +1,5 @@
 ﻿using BL.Extensions;
-using BL.Log;
+using BL.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
