@@ -10,14 +10,17 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["04.ShabzakAPI/04.ShabzakAPI.csproj", "04.ShabzakAPI/"]
+COPY ["BL/03.BL.csproj", "BL/"]
+COPY ["DataLayer/01.DataLayer.csproj", "DataLayer/"]
+COPY ["Translators/02.Translators.csproj", "Translators/"]
 RUN dotnet restore "./04.ShabzakAPI/04.ShabzakAPI.csproj"
 COPY . .
-WORKDIR "/src/04.ShabzakAPI"
-RUN dotnet build "./04.ShabzakAPI.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src"]
+RUN dotnet build "/src/04.ShabzakAPI/04.ShabzakAPI.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./04.ShabzakAPI.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "/src/04.ShabzakAPI/04.ShabzakAPI.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
