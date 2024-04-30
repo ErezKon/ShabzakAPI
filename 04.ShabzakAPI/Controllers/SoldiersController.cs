@@ -95,10 +95,6 @@ namespace _04.ShabzakAPI.Controllers
         public Soldier UpdateSoldier(Soldier soldier)
         {
             var ret = _soldierService.Update(soldier);
-            if(ret != null)
-            {
-
-            }
             return ret;
         }
     }
