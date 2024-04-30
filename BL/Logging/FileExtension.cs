@@ -10,16 +10,23 @@ namespace BL.Logging
     {
         public static void SafeCreate(string path)
         {
-            if (!File.Exists(path))
+            try
             {
-                var fileInfo = new FileInfo(path);
-                if (!Directory.Exists(fileInfo.Directory.FullName))
+                if (!File.Exists(path))
                 {
-                    Directory.CreateDirectory(fileInfo.Directory.FullName);
+                    var fileInfo = new FileInfo(path);
+                    if (!Directory.Exists(fileInfo.Directory.FullName))
+                    {
+                        Directory.CreateDirectory(fileInfo.Directory.FullName);
+                    }
+                    var file = File.Create(path);
+                    file.Close();
+                    file.Dispose();
                 }
-                var file = File.Create(path);
-                file.Close();
-                file.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
             }
         }
     }
