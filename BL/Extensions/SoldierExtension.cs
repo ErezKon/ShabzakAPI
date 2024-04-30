@@ -13,6 +13,7 @@ namespace BL.Extensions
         private static readonly string naEncrypted;
         private static readonly AESEncryptor encryptor;
 
+
         static SoldierExtension() 
         {
             encryptor = new AESEncryptor();
@@ -52,6 +53,22 @@ namespace BL.Extensions
             {
                 soldier.Position = encryptor.Encrypt(soldier.Position);
             }
+            if (string.IsNullOrEmpty(soldier.Platoon))
+            {
+                soldier.Platoon = naEncrypted;
+            }
+            else
+            {
+                soldier.Platoon = encryptor.Encrypt(soldier.Platoon);
+            }
+            if (string.IsNullOrEmpty(soldier.Company))
+            {
+                soldier.Company = naEncrypted;
+            }
+            else
+            {
+                soldier.Company = encryptor.Encrypt(soldier.Company);
+            }
             return soldier;
         }
 
@@ -82,6 +99,22 @@ namespace BL.Extensions
             {
                 soldier.Phone = encryptor.Encrypt(soldier.Phone);
             }
+            if (string.IsNullOrEmpty(soldier.Platoon))
+            {
+                soldier.Platoon = naEncrypted;
+            }
+            else
+            {
+                soldier.Platoon = encryptor.Encrypt(soldier.Platoon);
+            }
+            if (string.IsNullOrEmpty(soldier.Company))
+            {
+                soldier.Company = naEncrypted;
+            }
+            else
+            {
+                soldier.Company = encryptor.Encrypt(soldier.Company);
+            }
             return soldier;
         }
 
@@ -89,18 +122,25 @@ namespace BL.Extensions
 
         public static DataLayer.Models.Soldier Decrypt(this DataLayer.Models.Soldier soldier)
         {
-            soldier.Name = encryptor.DecryptAES(soldier.Name);
-            soldier.Phone = encryptor.DecryptAES(soldier.Phone);
-            soldier.PersonalNumber = encryptor.DecryptAES(soldier.PersonalNumber);
-            soldier.Position = encryptor.DecryptAES(soldier.Position);
+            soldier.Name = encryptor.Decrypt(soldier.Name);
+            soldier.Phone = encryptor.Decrypt(soldier.Phone);
+            soldier.PersonalNumber = encryptor.Decrypt(soldier.PersonalNumber);
+            soldier.Position = encryptor.Decrypt(soldier.Position);
+            if(soldier.Platoon.Length > 1)
+            {
+                soldier.Platoon = encryptor.Decrypt(soldier.Platoon);
+            }
+            soldier.Company = encryptor.Decrypt(soldier.Company);
             return soldier;
         }
 
         public static Soldier Decrypt(this Soldier soldier)
         {
-            soldier.Name = encryptor.DecryptAES(soldier.Name);
-            soldier.Phone = encryptor.DecryptAES(soldier.Phone);
-            soldier.PersonalNumber = encryptor.DecryptAES(soldier.PersonalNumber);
+            soldier.Name = encryptor.Decrypt(soldier.Name);
+            soldier.Phone = encryptor.Decrypt(soldier.Phone);
+            soldier.PersonalNumber = encryptor.Decrypt(soldier.PersonalNumber);
+            soldier.Platoon = encryptor.Decrypt(soldier.Platoon);
+            soldier.Company = encryptor.Decrypt(soldier.Company);
             return soldier;
         }
 

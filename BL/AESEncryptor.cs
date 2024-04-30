@@ -13,8 +13,15 @@ namespace BL
     {
         public static readonly string GenKey = "g1rmNZsVU5+maAU/nVhWg89t9qSNAU3jPqCnLDT1TDk=";
         public static readonly string GenIV = "wb6ZsDrefHgpaebdweEjcg==";
+
+        private static readonly Dictionary<string, string> decryptionDic = [];
+        private static readonly Dictionary<string, string> encryptionDic = [];
         public string Encrypt(string plainText)
         {
+            if(encryptionDic.ContainsKey(plainText))
+            {
+                return encryptionDic[plainText];
+            }
             byte[] encrypted;
 
             using (var rijAlg = new RijndaelManaged())
@@ -37,15 +44,21 @@ namespace BL
                 encrypted = msEncrypt.ToArray();
             }
             // Return the encrypted bytes from the memory stream. 
-            return Convert.ToBase64String(encrypted);
+            var enc = Convert.ToBase64String(encrypted);
+            encryptionDic[plainText] = enc;
+            return enc;
         }
 
-        public string DecryptAES(string cipherText)
+        public string Decrypt(string cipherText)
         {
             // Check arguments. 
             if (string.IsNullOrWhiteSpace(cipherText))
             { 
                 throw new ArgumentNullException("cipherText cannot be null");
+            }
+            if (decryptionDic.ContainsKey(cipherText))
+            {
+                return decryptionDic[cipherText];
             }
             // Declare the string used to hold 
             // the decrypted text. 
@@ -62,15 +75,16 @@ namespace BL
                 var decryptor = rijAlg.CreateDecryptor(rijAlg.Key, rijAlg.IV);
 
                 // Create the streams used for decryption. 
-                using MemoryStream msDecrypt = new MemoryStream(cipherTextString);
-                using CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read);
-                using StreamReader srDecrypt = new StreamReader(csDecrypt);
+                using MemoryStream msDecrypt = new(cipherTextString);
+                using CryptoStream csDecrypt = new(msDecrypt, decryptor, CryptoStreamMode.Read);
+                using StreamReader srDecrypt = new(csDecrypt);
 
                 // Read the decrypted bytes from the decrypting stream 
                 // and place them in a string.
                 plaintext = srDecrypt.ReadToEnd();
 
             }
+            decryptionDic[cipherText] = plaintext;
             return plaintext;
         }
 

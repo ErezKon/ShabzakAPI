@@ -12,7 +12,7 @@ namespace BL.Cache
     public class SoldiersCache
     {
         private static SoldiersCache Instance { get; set; }
-        public static IEnumerable<Soldier> Soldiers { get; private set; }
+        public static IEnumerable<Soldier> Soldiers { get; private set; } = new List<Soldier>();
         public static IEnumerable<DataLayer.Models.Soldier> DbSoldiers { get; private set; }
         private SoldiersCache() 
         {
@@ -27,10 +27,12 @@ namespace BL.Cache
             using var db = new DataLayer.ShabzakDB();
             DbSoldiers = db.Soldiers
                 .ToList()
-                .Select(s => s.Decrypt());
+                .Select(s => s.Decrypt())
+                .ToList();
 
             Soldiers = DbSoldiers
-                .Select(s => SoldierTanslator.ToBL(s));
+                .Select(s => SoldierTanslator.ToBL(s))
+                .ToList();
         }
 
         public static SoldiersCache GetInstance()
@@ -51,6 +53,27 @@ namespace BL.Cache
         public List<Soldier> GetSoldiers() => Soldiers.ToList();
         public List<DataLayer.Models.Soldier> GetDBSoldiers() => DbSoldiers.ToList();
 
+        public void UpdateSoldier(Soldier soldier)
+        {
+            Soldiers = Soldiers
+                .Where(s => s.Id != soldier.Id)
+                .Union([soldier])
+                .ToList();
+        }
+        
+        public void AddSoldier(Soldier soldier)
+        {
+            Soldiers = Soldiers
+                .Union([soldier])
+                .ToList();
+        }
 
+        public static Task ReloadAsync()
+        {
+            return Task.Factory.StartNew(() =>
+            {
+                ReloadCache();
+            });
+        }
     }
 }

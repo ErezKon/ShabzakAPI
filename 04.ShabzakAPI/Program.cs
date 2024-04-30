@@ -23,6 +23,19 @@ builder.Services.AddSingleton(soldierService);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+
+var corsPolicy = "AllPolicy";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(corsPolicy,
+        policy =>
+        {
+            policy.AllowAnyOrigin();
+            policy.AllowAnyMethod();
+            policy.AllowAnyHeader();
+        });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -35,6 +48,8 @@ var app = builder.Build();
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
+
+app.UseCors(corsPolicy);
 
 app.MapControllers();
 

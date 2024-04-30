@@ -5,6 +5,7 @@ using System.IO;
 using BL;
 using BL.Cache;
 using BL.Services;
+using BL.Extensions;
 
 namespace _04.ShabzakAPI.Controllers
 {
@@ -64,9 +65,22 @@ namespace _04.ShabzakAPI.Controllers
             //}
             //System.IO.File.WriteAllLines(csvPath.Replace(".csv", " 2.csv"), newLines);
 
-            var csvLoader = new CSVLoader();
-            var csvPath = @"C:\Parse\9213 2.csv";
-            var soldiers = csvLoader.ParseSoldiersToDB(csvPath);
+            //var csvLoader = new CSVLoader();
+            //var csvPath = @"C:\Parse\9213 2.csv";
+            //var soldiers = csvLoader.ParseSoldiersToDB(csvPath);
+            //return null;
+
+            using var db = new DataLayer.ShabzakDB();
+            var encryptor = new AESEncryptor();
+            var soldiers = db.Soldiers.ToList();
+            foreach(var sol in soldiers)
+            {
+                if(string.IsNullOrEmpty(sol.Platoon))
+                {
+                    sol.Platoon = encryptor.Encrypt("N/A");
+                }
+            }
+            db.SaveChanges();
             return null;
         }
 
@@ -81,6 +95,10 @@ namespace _04.ShabzakAPI.Controllers
         public Soldier UpdateSoldier(Soldier soldier)
         {
             var ret = _soldierService.Update(soldier);
+            if(ret != null)
+            {
+
+            }
             return ret;
         }
     }

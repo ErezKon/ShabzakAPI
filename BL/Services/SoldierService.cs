@@ -1,4 +1,5 @@
-﻿using BL.Extensions;
+﻿using BL.Cache;
+using BL.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +20,7 @@ namespace BL.Services
         {
             using var db = new DataLayer.ShabzakDB();
             db.Soldiers.Add(soldier.Encrypt());
+            SoldiersCache.ReloadAsync();
             return soldier.Decrypt().ToBL();
         }
         public Soldier Update(Soldier soldier) => Update(soldier.ToDB());
@@ -37,6 +39,7 @@ namespace BL.Services
             sol.Platoon = soldier.Platoon;
             sol.Encrypt();
             db.SaveChanges();
+            SoldiersCache.ReloadAsync();
             return sol.Decrypt().ToBL();
         }
     }
