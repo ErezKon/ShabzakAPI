@@ -26,6 +26,7 @@ namespace BL.Services
             {
                 using var db = new DataLayer.ShabzakDB();
                 db.Soldiers.Add(soldier.Encrypt());
+                db.SaveChanges();
                 SoldiersCache.ReloadAsync();
                 return soldier.Decrypt().ToBL();
             }
