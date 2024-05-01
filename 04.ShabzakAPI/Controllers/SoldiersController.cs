@@ -71,17 +71,15 @@ namespace _04.ShabzakAPI.Controllers
             //return null;
 
             using var db = new DataLayer.ShabzakDB();
-            var encryptor = new AESEncryptor();
             var soldiers = db.Soldiers.ToList();
-            foreach(var sol in soldiers)
-            {
-                if(string.IsNullOrEmpty(sol.Platoon))
-                {
-                    sol.Platoon = encryptor.Encrypt("N/A");
-                }
-            }
-            db.SaveChanges();
             return null;
+        }
+
+        [HttpGet("ReloadCache")]
+        public string ReloadCache()
+        {
+            SoldiersCache.ReloadCache();
+            return "Soldiers cache reloaded.";
         }
 
         [HttpGet("GetSoldiers")]
