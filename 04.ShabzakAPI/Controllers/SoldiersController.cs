@@ -104,10 +104,10 @@ namespace _04.ShabzakAPI.Controllers
         }
 
         [HttpPost("DeleteSoldier")]
-        public bool DeleteSoldier(int soldierId)
+        public int DeleteSoldier(int soldierId)
         {
             _soldierService.DeleteSoldier(soldierId);
-            return true;
+            return soldierId;
         }
     }
 }
