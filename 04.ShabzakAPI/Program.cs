@@ -19,6 +19,9 @@ builder.Services.AddSingleton(soldiersCache);
 var soldierService = new SoldierService();
 builder.Services.AddSingleton(soldierService);
 
+var missionService = new MissionService();
+builder.Services.AddSingleton(missionService);
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
