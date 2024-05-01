@@ -26,7 +26,7 @@ namespace BL.Logging
             {
                 var stamp = DateTime.Now.ToLocalTime().ToString("ddMMyyyy.HHmmss.fff");
                 var level = lvl == LogLevel.Info ? "[I]" : lvl == LogLevel.Warning ? "[W]" : "[E]";
-                var msg = $"[ShinyBot] {stamp} {level} - {message}\n";
+                var msg = $"{stamp} {level} - {message}\n";
                 Console.ForegroundColor = color;
                 Console.WriteLine(msg);
                 Console.ForegroundColor = ConsoleColor.Gray;
