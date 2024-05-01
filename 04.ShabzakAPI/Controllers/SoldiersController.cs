@@ -72,13 +72,6 @@ namespace _04.ShabzakAPI.Controllers
 
             using var db = new DataLayer.ShabzakDB();
             var soldiers = db.Soldiers.ToList();
-            using var remote = new DataLayer.RemoteDB();
-            foreach (var sol in soldiers)
-            {
-                sol.Id = 0;
-                remote.Soldiers.Add(sol);
-            }
-            remote.SaveChanges();
             return null;
         }
 
