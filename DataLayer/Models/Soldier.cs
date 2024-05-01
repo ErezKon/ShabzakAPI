@@ -31,8 +31,10 @@ namespace DataLayer.Models
         [Required]
         public string Position { get; set; }
 
-        public virtual ICollection<SoldierMission> Missions { get; set; } = new HashSet<SoldierMission>();
+        public bool Active { get; set; }
 
-        public virtual ICollection<Vacation> Vacations { get; set; } = new HashSet<Vacation>();
+        public virtual ICollection<SoldierMission> Missions { get; set; } = [];
+
+        public virtual ICollection<Vacation> Vacations { get; set; } = [];
     } 
 }

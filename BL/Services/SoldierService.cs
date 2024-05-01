@@ -76,6 +76,7 @@ namespace BL.Services
                     throw new ArgumentException("Can't find soldier.");
                 }
                 db.Soldiers.Remove(soldier);
+                SoldiersCache.ReloadAsync();
                 db.SaveChanges();
             }
             catch (Exception ex)

@@ -46,6 +46,8 @@ namespace DataLayer
                     .IsRequired();
                 entity.Property(e => e.Company)
                     .IsRequired();
+                entity.Property(e => e.Active)
+                .HasDefaultValue(true);
 
                 entity.HasMany(e => e.Missions)
                     .WithOne(e => e.Soldier)

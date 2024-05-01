@@ -23,6 +23,6 @@ namespace DataLayer.Models
         public int Count { get; set; }
 
         public virtual Mission Mission { get; set; } = new Mission();
-        public virtual ICollection<SoldierMission> Soldiers { get; set; } = new HashSet<SoldierMission>();
+        public virtual ICollection<SoldierMission> Soldiers { get; set; } = [];
     }
 }
