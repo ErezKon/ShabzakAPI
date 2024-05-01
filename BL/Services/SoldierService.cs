@@ -64,5 +64,25 @@ namespace BL.Services
                 throw;
             }
         }
+
+        public void DeleteSoldier(int id)
+        {
+            try
+            {
+                using var db = new DataLayer.ShabzakDB();
+                var soldier = db.Soldiers.FirstOrDefault(s => s.Id == id);
+                if(soldier == null)
+                {
+                    throw new ArgumentException("Can't find soldier.");
+                }
+                db.Soldiers.Remove(soldier);
+                db.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Error while deleting soldier:\n{ex}");
+                throw;
+            }
+        }
     }
 }
