@@ -11,6 +11,10 @@ namespace Translators.Translators
     {
         public static MissionPosition ToBL(DataLayer.Models.MissionPositions mp)
         {
+            if(mp == null)
+            {
+                return null;
+            }
             return new MissionPosition()
             {
                 Id = mp.Id,
@@ -22,6 +26,10 @@ namespace Translators.Translators
 
         public static DataLayer.Models.MissionPositions ToDB(MissionPosition mp)
         {
+            if (mp == null)
+            {
+                return null;
+            }
             return new DataLayer.Models.MissionPositions()
             {
                 Id = mp.Id,

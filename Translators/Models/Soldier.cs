@@ -18,5 +18,6 @@ namespace Translators.Models
         public bool Active { get; set; }
         public List<Position> Positions { get; set; }
         public List<Vacation> Vacations { get; set; }
+        public List<SoldierMission> Missions { get; set; }
     }
 }

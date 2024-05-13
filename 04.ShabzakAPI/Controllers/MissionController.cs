@@ -1,7 +1,9 @@
 ﻿using BL.Cache;
+using BL.Extensions;
 using BL.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using ShabzakAPI.ViewModels;
 using Translators.Models;
 
 namespace ShabzakAPI.Controllers
@@ -44,6 +46,28 @@ namespace ShabzakAPI.Controllers
         {
 
             var ret = _missionService.DeleteMission(missionId);
+            return ret;
+        }
+
+        [HttpPost("AssignSoldiers")]
+        public Mission AssignSoldiers(AssignSoldierToMissionRequest soldiers)
+        {
+            var ret = _missionService.AssignSoldiersToMission(soldiers.MissionId, soldiers.MissionInstanceId, soldiers.Soldiers
+                .Select(s => new DataLayer.Models.SoldierMission
+                {
+                    SoldierId = s.SoldierId,
+                    MissionPositionId = s.MissionPositionId,
+                    MissionInstanceId = soldiers.MissionInstanceId,
+
+                }).ToList());
+            return ret;
+        }
+
+        [HttpPost("UnassignSoldier")]
+        public Mission UnassignSoldier(int missionId, int missionInstanceId, int soldierId)
+        {
+
+            var ret = _missionService.UnassignSoldiersToMission(missionId, missionInstanceId, soldierId);
             return ret;
         }
     }

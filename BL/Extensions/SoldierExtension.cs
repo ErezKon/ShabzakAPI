@@ -144,7 +144,7 @@ namespace BL.Extensions
             return soldier;
         }
 
-        public static Soldier ToBL(this DataLayer.Models.Soldier soldier) => SoldierTanslator.ToBL(soldier);
-        public static DataLayer.Models.Soldier ToDB(this Soldier soldier) => SoldierTanslator.ToDB(soldier);
+        public static Soldier ToBL(this DataLayer.Models.Soldier soldier) => SoldierTranslator.ToBL(soldier);
+        public static DataLayer.Models.Soldier ToDB(this Soldier soldier) => SoldierTranslator.ToDB(soldier);
     }
 }

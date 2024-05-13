@@ -6,6 +6,7 @@ using BL;
 using BL.Cache;
 using BL.Services;
 using BL.Extensions;
+using Newtonsoft.Json;
 
 namespace _04.ShabzakAPI.Controllers
 {
@@ -71,7 +72,18 @@ namespace _04.ShabzakAPI.Controllers
             //return null;
 
             using var db = new DataLayer.ShabzakDB();
-            var soldiers = db.Soldiers.ToList();
+            using var remote = new DataLayer.RemoteDB();
+            var soldiers = db.Soldiers
+                .ToList();
+
+            foreach (var soldier in soldiers)
+            {
+                soldier.Id = 0;
+            }
+
+            remote.Soldiers.AddRange(soldiers);
+            remote.SaveChanges();
+
             return null;
         }
 

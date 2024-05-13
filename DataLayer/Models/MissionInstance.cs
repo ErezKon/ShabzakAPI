@@ -8,24 +8,21 @@ using System.Threading.Tasks;
 
 namespace DataLayer.Models
 {
-    public class SoldierMission
+    public class MissionInstance
     {
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
-        [Required] 
-        public int SoldierId { get; set; }
+        public int MissionId { get; set; }
 
         [Required]
-        public int MissionInstanceId { get; set; }
+        public DateTime FromTime { get; set; }
 
         [Required]
-        public int MissionPositionId { get; set; }
+        public DateTime ToTime { get; set; }
 
-        public virtual Soldier Soldier { get; set; }
+        public virtual List<SoldierMission> Soldiers { get; set; }
+        public virtual Mission Mission { get; set; }
 
-        public virtual MissionInstance MissionInstance { get; set; }
-
-        public virtual MissionPositions MissionPosition { get; set; }
     }
 }

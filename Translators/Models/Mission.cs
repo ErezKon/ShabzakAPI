@@ -21,5 +21,6 @@ namespace Translators.Models
 
         public List<Soldier> Soldiers { get; set;}
         public List<MissionPosition> Positions { get; set;}
+        public List<MissionInstance> MissionInstances { get; set; }
     }
 }

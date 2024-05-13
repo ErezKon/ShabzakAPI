@@ -11,22 +11,34 @@ namespace Translators.Translators
     {
         public static Mission ToBL(DataLayer.Models.Mission mis)
         {
-            return new Mission()
+            try
             {
-                Id = mis.Id,
-                Name = mis.Name,
-                Description = mis.Description,
-                CommandersRequired = mis.CommandersRequired,
-                SoldiersRequired = mis.SoldiersRequired,
-                Duration = mis.Duration,
-                FromTime = mis.FromTime,
-                ToTime = mis.ToTime,
-                IsSpecial = mis.IsSpecial,
-                Positions = mis.MissionPositions
-                    .Select(mp => MissionPositionTranslator.ToBL(mp))
-                    .ToList()
-                    ?? []
-            };
+
+                return new Mission()
+                {
+                    Id = mis.Id,
+                    Name = mis.Name,
+                    Description = mis.Description,
+                    CommandersRequired = mis.CommandersRequired,
+                    SoldiersRequired = mis.SoldiersRequired,
+                    Duration = mis.Duration,
+                    FromTime = mis.FromTime,
+                    ToTime = mis.ToTime,
+                    IsSpecial = mis.IsSpecial,
+                    Positions = mis.MissionPositions
+                        ?.Select(mp => MissionPositionTranslator.ToBL(mp))
+                        ?.ToList()
+                        ?? [],
+                    MissionInstances = mis.MissionInstances
+                    ?.Select(m => MissionInstanceTranslator.ToBL(m, false))
+                    ?.ToList() ?? []
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                throw;
+            }
         }
 
 
@@ -44,9 +56,12 @@ namespace Translators.Translators
                 ToTime = mis.ToTime,
                 IsSpecial = mis.IsSpecial,
                 MissionPositions = mis.Positions
-                    .Select(mp => MissionPositionTranslator.ToDB(mp))
-                    .ToList()
-                    ?? []
+                    ?.Select(mp => MissionPositionTranslator.ToDB(mp))
+                    ?.ToList()
+                    ?? [],
+                MissionInstances = mis.MissionInstances
+                    ?.Select(m => MissionInstanceTranslator.ToDB(m))
+                    ?.ToList() ?? []
             };
         }
     }

@@ -1,5 +1,6 @@
 ﻿using BL.Extensions;
 using BL.Logging;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,12 +29,14 @@ namespace BL.Cache
         {
             using var db = new DataLayer.ShabzakDB();
             DbSoldiers = db.Soldiers
+                .Include(s => s.Missions)
+                .Include(s => s.Vacations)
                 .ToList()
                 .Select(s => s.Decrypt())
                 .ToList();
 
             Soldiers = DbSoldiers
-                .Select(s => SoldierTanslator.ToBL(s))
+                .Select(s => SoldierTranslator.ToBL(s))
                 .ToList();
 
             Logger.Log($"Loaded {Soldiers.Count()} soldiers to cache");

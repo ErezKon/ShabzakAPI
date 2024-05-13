@@ -7,7 +7,7 @@ using Translators.Models;
 
 namespace Translators.Translators
 {
-    public abstract class SoldierTanslator
+    public abstract class SoldierTranslator
     {
         public static Soldier ToBL(DataLayer.Models.Soldier sol)
         {
@@ -30,10 +30,13 @@ namespace Translators.Translators
                         return Position.Simple;
                     })
                     .ToList(),
-                Vacations = sol.Vacations?
-                .Select(v => VacationTranslator.ToBL(v))
-                .ToList()
-                ?? []
+                Vacations = sol.Vacations
+                ?.Select(v => VacationTranslator.ToBL(v))
+                ?.ToList()
+                ?? [],
+                Missions = sol.Missions
+                    ?.Select(m => SoldierMissionTranslator.ToBL(m, false))
+                    ?.ToList() ?? []
             };
         }
 
@@ -50,9 +53,9 @@ namespace Translators.Translators
                 Company = sol.Company,
                 Active = sol.Active,
                 Position = string.Join(",", sol.Positions.Select(p => ((int)p).ToString()).ToArray()),
-                Vacations = sol.Vacations?
-                .Select(v => VacationTranslator.ToDB(v))
-                .ToList()
+                Vacations = sol.Vacations
+                ?.Select(v => VacationTranslator.ToDB(v))
+                ?.ToList()
                 ?? []
             };
         }

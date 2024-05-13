@@ -16,7 +16,6 @@ namespace DataLayer.Models
         [Required]
         public string Name { get; set; }
 
-        [Required]
         public string Description { get; set; }
 
         [Required]
@@ -34,7 +33,7 @@ namespace DataLayer.Models
 
         public bool IsSpecial { get; set; }
 
-        public virtual ICollection<SoldierMission> SoldierMissions{ get; set; }
+        public virtual ICollection<MissionInstance> MissionInstances { get; set; }
         public virtual ICollection<MissionPositions> MissionPositions { get; set; }
 
     }
