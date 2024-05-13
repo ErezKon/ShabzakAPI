@@ -5,11 +5,6 @@ using DataLayer;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-//builder.Services.AddDbContext<RemoteDB>();
-//var remote = new RemoteDB();
-//remote.Database.EnsureCreated();
-//remote.SaveChanges();
-//remote.Dispose();
 
 builder.Services.AddControllers();
 builder.Services.AddDbContext<ShabzakDB>();
@@ -17,7 +12,6 @@ var db = new ShabzakDB();
 db.Database.EnsureCreated();
 db.SaveChanges();
 db.Dispose();
-
 
 var soldiersCache = SoldiersCache.GetInstance();
 builder.Services.AddSingleton(soldiersCache);
