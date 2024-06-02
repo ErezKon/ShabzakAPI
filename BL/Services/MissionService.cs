@@ -44,9 +44,8 @@ namespace BL.Services
             return ret;
         }
 
-        public DataLayer.Models.Mission GetDBMissionById(int missionId)
+        public DataLayer.Models.Mission GetDBMissionById(DataLayer.ShabzakDB db, int missionId)
         {
-            using var db = new DataLayer.ShabzakDB();
             var mission = db.Missions
                 .Include(m => m.MissionInstances)
                 .Include(m => m.MissionPositions)
@@ -81,7 +80,7 @@ namespace BL.Services
             try
             {
                 using var db = new DataLayer.ShabzakDB();
-                var dbModel = GetDBMissionById(mission.Id);
+                var dbModel = GetDBMissionById(db, mission.Id);
                 dbModel.Name = mission.Name;
                 dbModel.Description = mission.Description;
                 dbModel.Duration = mission.Duration;
@@ -90,11 +89,11 @@ namespace BL.Services
                 dbModel.FromTime = mission.FromTime;
                 dbModel.ToTime = mission.ToTime;
                 dbModel.IsSpecial = mission.IsSpecial;
-                foreach(var mi in mission.MissionInstances)
+                foreach (var mi in mission.MissionInstances)
                 {
                     var miDbModel = db.MissionInstances
                         .FirstOrDefault(m => m.Id == mi.Id);
-                    if(miDbModel != null)
+                    if (miDbModel != null)
                     {
                         miDbModel.FromTime = mi.FromTime;
                         miDbModel.ToTime = mi.ToTime;
@@ -103,7 +102,7 @@ namespace BL.Services
                 dbModel.Encrypt();
                 db.SaveChanges();
                 MissionsCache.ReloadAsync();
-                return GetDBMissionById(mission.Id)
+                return GetDBMissionById(db, mission.Id)
                     .Decrypt()
                     .ToBL(false, false);
             }
@@ -120,7 +119,7 @@ namespace BL.Services
             try
             {
                 using var db = new DataLayer.ShabzakDB();
-                var mission = GetDBMissionById(missionId);
+                var mission = GetDBMissionById(db, missionId);
                 Logger.Log($"Found Mission:\n {JsonConvert.SerializeObject(mission.Decrypt(), Formatting.Indented)}");
                 db.Missions.Remove(mission);
                 db.SaveChanges();
@@ -137,7 +136,7 @@ namespace BL.Services
         public Mission AssignSoldiersToMission(int missionId, int missionInstanceId, IEnumerable<DataLayer.Models.SoldierMission> soldiers)
         {
             var db = new DataLayer.ShabzakDB();
-            var mission = GetDBMissionById(missionId);
+            var mission = GetDBMissionById(db, missionId);
             var instance = db.MissionInstances
                 .Include(m => m.Soldiers)
                 .FirstOrDefault(i => i.Id == missionInstanceId) ?? throw new ArgumentException("Mission Instance not found.");
@@ -161,13 +160,13 @@ namespace BL.Services
 
             db.SaveChanges();
             MissionsCache.ReloadAsync();
-            return GetDBMissionById(missionId).ToBL();
+            return GetDBMissionById(db, missionId).ToBL();
         }
 
         public Mission UnassignSoldiersToMission(int missionId, int missionInstanceId, int soldierId)
         {
             var db = new DataLayer.ShabzakDB();
-            var mission = GetDBMissionById(missionId);
+            var mission = GetDBMissionById(db, missionId);
             var instance = mission?.MissionInstances
                 ?.FirstOrDefault(i => i.Id == missionInstanceId) ?? throw new ArgumentException("Mission Instance not found.");
             var soldierMission = instance.Soldiers
@@ -175,7 +174,7 @@ namespace BL.Services
             db.SoldierMission.Remove(soldierMission);
             db.SaveChanges();
             MissionsCache.ReloadAsync();
-            return GetDBMissionById(missionId).ToBL();
+            return GetDBMissionById(db, missionId).ToBL();
         }
     }
 }
