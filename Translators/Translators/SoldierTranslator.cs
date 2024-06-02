@@ -11,6 +11,10 @@ namespace Translators.Translators
     {
         public static Soldier ToBL(DataLayer.Models.Soldier sol)
         {
+            if(sol == null)
+            {
+                return null;
+            }
             return new Soldier()
             {
                 Id = sol.Id,

@@ -20,7 +20,7 @@ namespace BL.Extensions
             naEncrypted = encryptor.Encrypt("N/A");
         }
 
-        public static Mission ToBL(this DataLayer.Models.Mission mission) => MissionTranslator.ToBL(mission);
+        public static Mission ToBL(this DataLayer.Models.Mission mission, bool includeSoldier = false, bool includeMission = false) => MissionTranslator.ToBL(mission, includeSoldier, includeMission);
 
         public static DataLayer.Models.Mission ToDB(this Mission mission) => MissionTranslator.ToDB(mission);
 

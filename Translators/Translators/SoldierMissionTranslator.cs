@@ -14,7 +14,7 @@ namespace Translators.Translators
             return new DataLayer.Models.SoldierMission
             {
                 Id = sol.Id,
-                MissionInstanceId = sol.MissionInstance.Id,
+                MissionInstanceId = sol.MissionInstance?.Id ?? 0,
                 SoldierId = sol.Soldier.Id,
                 MissionPositionId = sol.MissionPosition.Id
             };

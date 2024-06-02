@@ -122,25 +122,31 @@ namespace BL.Extensions
 
         public static DataLayer.Models.Soldier Decrypt(this DataLayer.Models.Soldier soldier)
         {
-            soldier.Name = encryptor.Decrypt(soldier.Name);
-            soldier.Phone = encryptor.Decrypt(soldier.Phone);
-            soldier.PersonalNumber = encryptor.Decrypt(soldier.PersonalNumber);
-            soldier.Position = encryptor.Decrypt(soldier.Position);
-            if(soldier.Platoon.Length > 1)
+            if (soldier != null)
             {
-                soldier.Platoon = encryptor.Decrypt(soldier.Platoon);
+                soldier.Name = encryptor.Decrypt(soldier.Name);
+                soldier.Phone = encryptor.Decrypt(soldier.Phone);
+                soldier.PersonalNumber = encryptor.Decrypt(soldier.PersonalNumber);
+                soldier.Position = encryptor.Decrypt(soldier.Position);
+                if (soldier.Platoon.Length > 1)
+                {
+                    soldier.Platoon = encryptor.Decrypt(soldier.Platoon);
+                }
+                soldier.Company = encryptor.Decrypt(soldier.Company);
             }
-            soldier.Company = encryptor.Decrypt(soldier.Company);
             return soldier;
         }
 
         public static Soldier Decrypt(this Soldier soldier)
         {
-            soldier.Name = encryptor.Decrypt(soldier.Name);
-            soldier.Phone = encryptor.Decrypt(soldier.Phone);
-            soldier.PersonalNumber = encryptor.Decrypt(soldier.PersonalNumber);
-            soldier.Platoon = encryptor.Decrypt(soldier.Platoon);
-            soldier.Company = encryptor.Decrypt(soldier.Company);
+            if(soldier != null)
+            {
+                soldier.Name = encryptor.Decrypt(soldier.Name);
+                soldier.Phone = encryptor.Decrypt(soldier.Phone);
+                soldier.PersonalNumber = encryptor.Decrypt(soldier.PersonalNumber);
+                soldier.Platoon = encryptor.Decrypt(soldier.Platoon);
+                soldier.Company = encryptor.Decrypt(soldier.Company);
+            }
             return soldier;
         }
 

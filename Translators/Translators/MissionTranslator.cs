@@ -9,7 +9,7 @@ namespace Translators.Translators
 {
     public abstract class MissionTranslator
     {
-        public static Mission ToBL(DataLayer.Models.Mission mis)
+        public static Mission ToBL(DataLayer.Models.Mission mis, bool includeSoldier = false, bool includeMission = false)
         {
             try
             {
@@ -30,7 +30,7 @@ namespace Translators.Translators
                         ?.ToList()
                         ?? [],
                     MissionInstances = mis.MissionInstances
-                    ?.Select(m => MissionInstanceTranslator.ToBL(m, false))
+                    ?.Select(m => MissionInstanceTranslator.ToBL(m, includeMission, includeSoldier))
                     ?.ToList() ?? []
                 };
             }

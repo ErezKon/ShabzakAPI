@@ -13,9 +13,12 @@ namespace ShabzakAPI.Controllers
     public class MissionController : ControllerBase
     {
         private readonly MissionService _missionService;
-        public MissionController(MissionService missionService)
+
+        private readonly SoldiersCache _soldiersCache;
+        public MissionController(MissionService missionService, SoldiersCache soldiersCache)
         {
             _missionService = missionService;
+            _soldiersCache = soldiersCache;
         }
 
         [HttpGet("GetMissions")]
@@ -34,10 +37,48 @@ namespace ShabzakAPI.Controllers
         }
 
         [HttpPost("UpdateMission")]
-        public Mission UpdateMission(Mission mission)
+        public Mission UpdateMission(AddEditMission mission)
         {
-
-            var ret = _missionService.UpdateMission(mission);
+            var parsedMission = new Mission
+            {
+                Id = mission.Id,
+                Name = mission.Name,
+                Description = mission.Description,
+                IsSpecial = mission.IsSpecial,
+                FromTime = mission.FromTime,
+                ToTime = mission.ToTime,
+                Duration = mission.Duration,
+                SoldiersRequired = mission.SoldiersRequired,
+                CommandersRequired = mission.CommandersRequired,
+                Positions = mission.Positions,
+                MissionInstances = mission.MissionInstances
+                    ?.Select(i =>
+                    {
+                        return new MissionInstance
+                        {
+                            Id = i.Id,
+                            FromTime = i.FromTime,
+                            ToTime = i.ToTime,
+                            SoldierMissions = i.SoldierMissions
+                                ?.Select(s =>
+                                {
+                                    return new SoldierMission
+                                    {
+                                        Id = s.Id,
+                                        Soldier = _soldiersCache.GetSoldierById(s.Id),
+                                        MissionPosition = new MissionPosition
+                                        {
+                                            MissionId = mission.Id,
+                                            Position = s.Position
+                                        }
+                                    };
+                                })
+                                ?.ToList() ?? []
+                        };
+                    })
+                    ?.ToList() ?? []
+            };
+            var ret = _missionService.UpdateMission(parsedMission);
             return ret;
         }
 

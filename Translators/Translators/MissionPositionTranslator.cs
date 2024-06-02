@@ -18,6 +18,7 @@ namespace Translators.Translators
             return new MissionPosition()
             {
                 Id = mp.Id,
+                MissionId = mp.MissionId,
                 Position = (Position) Enum.Parse(typeof(Position), mp.Position.ToString()),
                 Count = mp.Count,
             };
@@ -33,6 +34,7 @@ namespace Translators.Translators
             return new DataLayer.Models.MissionPositions()
             {
                 Id = mp.Id,
+                MissionId = mp.MissionId,
                 Position = (DataLayer.Models.Position)Enum.Parse(typeof(DataLayer.Models.Position), mp.Position.ToString()),
                 Count = mp.Count
             };

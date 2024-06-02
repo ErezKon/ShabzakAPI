@@ -14,8 +14,24 @@ namespace BL.Cache
     public class SoldiersCache
     {
         private static SoldiersCache Instance { get; set; }
-        public static IEnumerable<Soldier> Soldiers { get; private set; } = new List<Soldier>();
-        public static IEnumerable<DataLayer.Models.Soldier> DbSoldiers { get; private set; }
+        public static IEnumerable<Soldier> Soldiers
+        {
+            get
+            {
+                return soldiersDic?.Values?.ToList() ?? [];
+            }
+        }
+        public static IEnumerable<DataLayer.Models.Soldier> DbSoldiers
+        {
+            get
+            {
+                return dbSoldiersDic?.Values?.ToList() ?? [];
+            }
+        }
+
+        private static Dictionary<int, Soldier> soldiersDic = [];
+
+        private static Dictionary<int, DataLayer.Models.Soldier> dbSoldiersDic = [];
         private SoldiersCache() 
         {
             Logger.Log("Creating Soldier Cache");
@@ -28,18 +44,20 @@ namespace BL.Cache
         public static void ReloadCache()
         {
             using var db = new DataLayer.ShabzakDB();
-            DbSoldiers = db.Soldiers
+            dbSoldiersDic = db.Soldiers
                 .Include(s => s.Missions)
                 .Include(s => s.Vacations)
                 .ToList()
                 .Select(s => s.Decrypt())
-                .ToList();
+                .GroupBy(s => s.Id)
+                .ToDictionary(k => k.Key, v => v.Single());
 
-            Soldiers = DbSoldiers
+            soldiersDic = DbSoldiers
                 .Select(s => SoldierTranslator.ToBL(s))
-                .ToList();
+                .GroupBy(s => s.Id)
+                .ToDictionary(k => k.Key, v => v.Single());
 
-            Logger.Log($"Loaded {Soldiers.Count()} soldiers to cache");
+            Logger.Log($"Loaded {soldiersDic.Count()} soldiers to cache");
         }
 
         public static SoldiersCache GetInstance()
@@ -62,17 +80,46 @@ namespace BL.Cache
 
         public void UpdateSoldier(Soldier soldier)
         {
-            Soldiers = Soldiers
-                .Where(s => s.Id != soldier.Id)
-                .Union([soldier])
-                .ToList();
+            lock(soldiersDic)
+            {
+                if (!soldiersDic.ContainsKey(soldier.Id))
+                {
+                    throw new ArgumentException("Soldier not found");
+                }
+                soldiersDic[soldier.Id] = soldier;
+            }
         }
         
         public void AddSoldier(Soldier soldier)
         {
-            Soldiers = Soldiers
-                .Union([soldier])
-                .ToList();
+            lock (soldiersDic)
+            {
+                soldiersDic.Add(soldier.Id, soldier);
+            }
+        }
+
+        public Soldier GetSoldierById(int id)
+        {
+            lock (soldiersDic)
+            {
+                if (soldiersDic.ContainsKey(id))
+                {
+                    return soldiersDic[id];
+                }
+            }
+            return null;
+        }
+
+        public DataLayer.Models.Soldier GetDbSoldierById(int id)
+        {
+            lock (dbSoldiersDic)
+            {
+                if (dbSoldiersDic.ContainsKey(id))
+                {
+                    return dbSoldiersDic[id];
+                }
+            }
+            return null;
         }
 
         public static Task ReloadAsync()

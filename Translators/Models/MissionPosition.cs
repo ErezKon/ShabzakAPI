@@ -11,6 +11,7 @@ namespace Translators.Models
     public class MissionPosition
     {
         public int Id { get; set; }
+        public int MissionId { get; set; }
         public Position Position { get; set; }
         public int Count { get; set; }
     }

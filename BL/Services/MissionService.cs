@@ -90,11 +90,22 @@ namespace BL.Services
                 dbModel.FromTime = mission.FromTime;
                 dbModel.ToTime = mission.ToTime;
                 dbModel.IsSpecial = mission.IsSpecial;
-                var ret = dbModel.ToBL();
+                foreach(var mi in mission.MissionInstances)
+                {
+                    var miDbModel = db.MissionInstances
+                        .FirstOrDefault(m => m.Id == mi.Id);
+                    if(miDbModel != null)
+                    {
+                        miDbModel.FromTime = mi.FromTime;
+                        miDbModel.ToTime = mi.ToTime;
+                    }
+                }
                 dbModel.Encrypt();
                 db.SaveChanges();
                 MissionsCache.ReloadAsync();
-                return ret;
+                return GetDBMissionById(mission.Id)
+                    .Decrypt()
+                    .ToBL(false, false);
             }
             catch (Exception ex)
             {
