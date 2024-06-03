@@ -1,5 +1,6 @@
 ﻿using BL.Cache;
 using BL.Extensions;
+using BL.Models;
 using BL.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -109,6 +110,14 @@ namespace ShabzakAPI.Controllers
         {
 
             var ret = _missionService.UnassignSoldiersToMission(missionId, missionInstanceId, soldierId);
+            return ret;
+        }
+
+
+        [HttpPost("GetAvailableSoldiers")]
+        public List<GetAvailableSoldiersModel> GetAvailableSoldiers(int missionInstanceId, List<int>? soldiersPool = null)
+        {
+            var ret = _missionService.GetAvailableSoldiers(missionInstanceId, soldiersPool);
             return ret;
         }
     }

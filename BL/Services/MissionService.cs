@@ -1,6 +1,7 @@
 ﻿using BL.Cache;
 using BL.Extensions;
 using BL.Logging;
+using BL.Models;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using System.Reflection;
@@ -10,6 +11,11 @@ namespace BL.Services
 {
     public class MissionService
     {
+        private readonly SoldiersCache _soldiersCache;
+        public MissionService(SoldiersCache soldiersCache)
+        {
+            _soldiersCache = soldiersCache;
+        }
         public List<Mission> GetMissions()
         {
             using var db = new DataLayer.ShabzakDB();
@@ -175,6 +181,55 @@ namespace BL.Services
             db.SaveChanges();
             MissionsCache.ReloadAsync();
             return GetDBMissionById(db, missionId).ToBL();
+        }
+
+        public List<GetAvailableSoldiersModel> GetAvailableSoldiers(int missionInstanceId, List<int>? soldiersPool = null)
+        {
+            var ret = new List<GetAvailableSoldiersModel>();
+            using var db = new DataLayer.ShabzakDB();
+
+            var missionInstance = db.MissionInstances
+                .First(mi => mi.Id == missionInstanceId);
+            var startTime = missionInstance.FromTime;
+            var endTime = missionInstance.ToTime;
+
+            var pool = soldiersPool != null ? soldiersPool : db.Soldiers.Select(s => s.Id).ToList();
+
+            foreach (var soldierId in pool)
+            {
+                var model = new GetAvailableSoldiersModel
+                {
+                    Soldier = _soldiersCache.GetSoldierById(soldierId),
+                };
+                model.Soldier.Missions = [];
+                var soldierMissions = db.SoldierMission
+                    .Where(mi => mi.SoldierId == soldierId)
+                    .Include(sm => sm.MissionInstance)
+                    .Include(sm => sm.Soldier)
+                    .OrderBy(sm => sm.MissionInstance.FromTime)
+                    .ToList();
+                if(soldierMissions.Count > 0)
+                {
+                    foreach (var sm in soldierMissions)
+                    {
+                        if(sm.MissionInstance.ToTime <= startTime)
+                        {
+                            var diff = startTime - sm.MissionInstance.ToTime;
+                            model.RestTimeBefore = diff.Hours;
+                        }
+                        if(sm.MissionInstance.FromTime > endTime)
+                        {
+                            var diff = sm.MissionInstance.FromTime - endTime;
+                            model.RestTimeAfter = diff.Hours;
+                        }
+                    }
+                }
+                ret.Add(model);
+            }
+
+            return ret
+                .OrderByDescending(r => r.RestTimeBefore)
+                .ToList();
         }
     }
 }
