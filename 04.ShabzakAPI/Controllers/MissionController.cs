@@ -115,9 +115,18 @@ namespace ShabzakAPI.Controllers
 
 
         [HttpPost("GetAvailableSoldiers")]
-        public List<GetAvailableSoldiersModel> GetAvailableSoldiers(int missionInstanceId, List<int>? soldiersPool = null)
+        public List<GetAvailableSoldiersModel> GetAvailableSoldiers(GetAvailableSoldiersRequest request)
         {
-            var ret = _missionService.GetAvailableSoldiers(missionInstanceId, soldiersPool);
+            var ret = _missionService.GetAvailableSoldiers(request.MissionInstanceId, request.SoldiersPool);
+            int? val = 0;
+            var temp = val ?? int.MaxValue;
+            return ret;
+        }
+
+        [HttpPost("GetMissionInstances")]
+        public List<MissionInstance> GetMissionInstances(int missionId)
+        {
+            var ret = _missionService.GetMissionInstances(missionId);
             return ret;
         }
     }

@@ -50,12 +50,18 @@ namespace BL.Services
             return ret;
         }
 
-        public DataLayer.Models.Mission GetDBMissionById(DataLayer.ShabzakDB db, int missionId)
+        public DataLayer.Models.Mission GetDBMissionById(DataLayer.ShabzakDB db, int missionId, bool includeInstances = true, bool includePositions = true)
         {
-            var mission = db.Missions
-                .Include(m => m.MissionInstances)
-                .Include(m => m.MissionPositions)
-                .FirstOrDefault(m => m.Id == missionId) ?? throw new ArgumentException("Mission not found.");
+            var query = db.Missions.AsQueryable();
+            if(includeInstances)
+            {
+                query = query.Include(m => m.MissionInstances);
+            }
+            if (includePositions)
+            {
+                query = query.Include(m => m.MissionPositions);
+            }
+            var mission = query.FirstOrDefault(m => m.Id == missionId) ?? throw new ArgumentException("Mission not found.");
             return mission;
         }
         public Mission AddMission(Mission mission) => AddMission(mission.ToDB());
@@ -125,7 +131,15 @@ namespace BL.Services
             try
             {
                 using var db = new DataLayer.ShabzakDB();
-                var mission = GetDBMissionById(db, missionId);
+                var mission = GetDBMissionById(db, missionId, false, false);
+                //foreach(var mp in mission.MissionPositions)
+                //{
+                //    mp.Mission = null;
+                //}
+                //foreach (var mi in mission.MissionInstances)
+                //{
+                //    mi.Mission = null;
+                //}
                 Logger.Log($"Found Mission:\n {JsonConvert.SerializeObject(mission.Decrypt(), Formatting.Indented)}");
                 db.Missions.Remove(mission);
                 db.SaveChanges();
@@ -228,8 +242,21 @@ namespace BL.Services
             }
 
             return ret
-                .OrderByDescending(r => r.RestTimeBefore)
+                .OrderByDescending(r => r.RestTimeBefore ?? int.MaxValue)
+                .ThenByDescending(r => r.RestTimeAfter ?? int.MaxValue)
                 .ToList();
+        }
+
+        public List<MissionInstance> GetMissionInstances(int missionId)
+        {
+            using var db = new DataLayer.ShabzakDB();
+            var instances = db.MissionInstances
+                .Where(mi => mi.MissionId == missionId)
+                .ToList()
+                .Select(mi => mi.ToBL())
+                .ToList();
+
+            return instances;
         }
     }
 }

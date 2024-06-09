@@ -26,6 +26,7 @@ namespace DataLayer
                 });
                 base.OnConfiguring(optionsBuilder);
             }
+            optionsBuilder.EnableSensitiveDataLogging();
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -72,7 +73,8 @@ namespace DataLayer
 
                 entity.HasMany(e => e.MissionPositions)
                     .WithOne(e => e.Mission)
-                    .HasForeignKey(e => e.MissionId);
+                    .HasForeignKey(e => e.MissionId)
+                    .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasMany(e => e.MissionInstances)
                     .WithOne(e => e.Mission)

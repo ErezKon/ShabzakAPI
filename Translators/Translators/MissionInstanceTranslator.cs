@@ -18,8 +18,8 @@ namespace Translators.Translators
             return new MissionInstance
             {
                 Id = missionInstance.Id,
-                FromTime = missionInstance.FromTime.ToString(),
-                ToTime = missionInstance.ToTime.ToString(),
+                FromTime = missionInstance.FromTime.ToString("dd/MM/yyyy hh:mm"),
+                ToTime = missionInstance.ToTime.ToString("dd/MM/yyyy hh:mm"),
                 SoldierMissions = missionInstance.Soldiers
                     ?.Select(s => SoldierMissionTranslator.ToBL(s, includeSoldier, includeMission))
                     ?.ToList() ?? []

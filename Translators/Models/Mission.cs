@@ -19,7 +19,6 @@ namespace Translators.Models
         public string? ToTime { get; set; }
         public bool IsSpecial { get; set; }
 
-        public List<Soldier> Soldiers { get; set;}
         public List<MissionPosition> Positions { get; set;}
         public List<MissionInstance> MissionInstances { get; set; }
     }
