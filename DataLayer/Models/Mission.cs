@@ -33,8 +33,35 @@ namespace DataLayer.Models
 
         public bool IsSpecial { get; set; }
 
+        public bool RequiredInstances { get; set; }
+
         public virtual ICollection<MissionInstance> MissionInstances { get; set; }
         public virtual ICollection<MissionPositions> MissionPositions { get; set; }
+
+        public Mission Clone()
+        {
+            var ret = new Mission();
+            ret.Id = Id;
+            ret.Name = Name;
+            ret.Description = Description;
+            ret.SoldiersRequired = SoldiersRequired;
+            ret.CommandersRequired = CommandersRequired;
+            ret.Duration = Duration;
+            ret.FromTime = FromTime;
+            ret.ToTime = ToTime;
+            ret.IsSpecial = IsSpecial;
+            ret.MissionInstances = MissionInstances?.ToList() ?? [];
+            ret.MissionPositions = MissionPositions?.ToList() ?? [];
+            return ret;
+        }
+
+        public Mission HideLists()
+        {
+            var ret = this.Clone();
+            ret.MissionInstances = [];
+            ret.MissionPositions = [];
+            return ret;
+        }
 
     }
 }

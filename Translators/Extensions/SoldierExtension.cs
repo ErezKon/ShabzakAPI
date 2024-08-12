@@ -1,12 +1,12 @@
-﻿using System;
+﻿using BL;
+using DataLayer.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Translators.Models;
-using Translators.Translators;
 
-namespace BL.Extensions
+namespace Translators.Extensions
 {
     public static class SoldierExtension
     {
@@ -14,20 +14,29 @@ namespace BL.Extensions
         private static readonly AESEncryptor encryptor;
 
 
-        static SoldierExtension() 
+        static SoldierExtension()
         {
             encryptor = new AESEncryptor();
             naEncrypted = encryptor.Encrypt("N/A");
         }
 
-        public static DataLayer.Models.Soldier Encrypt(this DataLayer.Models.Soldier soldier)
+        public static Soldier Decrypt(this Soldier soldier)
         {
-            var ret = Translators.Extensions.SoldierExtension.Encrypt(soldier);
-            return ret;
+            if (soldier != null)
+            {
+                soldier.Name = encryptor.Decrypt(soldier.Name);
+                soldier.Phone = encryptor.Decrypt(soldier.Phone);
+                soldier.PersonalNumber = encryptor.Decrypt(soldier.PersonalNumber);
+                soldier.Position = encryptor.Decrypt(soldier.Position);
+                if (soldier.Platoon.Length > 1)
+                {
+                    soldier.Platoon = encryptor.Decrypt(soldier.Platoon);
+                }
+                soldier.Company = encryptor.Decrypt(soldier.Company);
+            }
+            return soldier;
         }
-
-
-        public static Soldier Encrypt(this Soldier soldier)
+        public static DataLayer.Models.Soldier Encrypt(this DataLayer.Models.Soldier soldier)
         {
             if (string.IsNullOrEmpty(soldier.Name))
             {
@@ -53,6 +62,14 @@ namespace BL.Extensions
             {
                 soldier.Phone = encryptor.Encrypt(soldier.Phone);
             }
+            if (string.IsNullOrEmpty(soldier.Position))
+            {
+                soldier.Position = naEncrypted;
+            }
+            else
+            {
+                soldier.Position = encryptor.Encrypt(soldier.Position);
+            }
             if (string.IsNullOrEmpty(soldier.Platoon))
             {
                 soldier.Platoon = naEncrypted;
@@ -71,29 +88,5 @@ namespace BL.Extensions
             }
             return soldier;
         }
-
-
-
-        public static DataLayer.Models.Soldier Decrypt(this DataLayer.Models.Soldier soldier)
-        {
-            var ret = Translators.Extensions.SoldierExtension.Decrypt(soldier);
-            return ret;
-        }
-
-        public static Soldier Decrypt(this Soldier soldier)
-        {
-            if(soldier != null)
-            {
-                soldier.Name = encryptor.Decrypt(soldier.Name);
-                soldier.Phone = encryptor.Decrypt(soldier.Phone);
-                soldier.PersonalNumber = encryptor.Decrypt(soldier.PersonalNumber);
-                soldier.Platoon = encryptor.Decrypt(soldier.Platoon);
-                soldier.Company = encryptor.Decrypt(soldier.Company);
-            }
-            return soldier;
-        }
-
-        public static Soldier ToBL(this DataLayer.Models.Soldier soldier) => SoldierTranslator.ToBL(soldier);
-        public static DataLayer.Models.Soldier ToDB(this Soldier soldier) => SoldierTranslator.ToDB(soldier);
     }
 }

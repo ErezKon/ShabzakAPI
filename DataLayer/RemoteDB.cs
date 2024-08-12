@@ -114,10 +114,10 @@ namespace DataLayer
                     .HasForeignKey(e => e.MissionInstanceId)
                     .OnDelete(DeleteBehavior.NoAction);
 
-                entity.HasOne(e => e.MissionPosition)
-                    .WithMany(e => e.Soldiers)
-                    .HasForeignKey(e => e.MissionInstanceId)
-                    .OnDelete(DeleteBehavior.NoAction);
+                //entity.HasOne(e => e.MissionPosition)
+                //    .WithMany(e => e.Soldiers)
+                //    .HasForeignKey(e => e.MissionInstanceId)
+                //    .OnDelete(DeleteBehavior.NoAction);
             });
 
             modelBuilder.Entity<MissionPositions>(entity =>
@@ -135,9 +135,9 @@ namespace DataLayer
                     .WithMany(e => e.MissionPositions)
                     .HasForeignKey(e => e.MissionId);
 
-                entity.HasMany(e => e.Soldiers)
-                    .WithOne(e => e.MissionPosition)
-                    .HasForeignKey(e => e.MissionInstanceId);
+                //entity.HasMany(e => e.Soldiers)
+                //    .WithOne(e => e.MissionPosition)
+                //    .HasForeignKey(e => e.MissionInstanceId);
             });
 
             modelBuilder.Entity<Vacation>(entity =>

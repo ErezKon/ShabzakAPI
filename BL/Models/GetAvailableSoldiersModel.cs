@@ -12,5 +12,6 @@ namespace BL.Models
         public Soldier Soldier { get; set; }
         public int? RestTimeBefore { get; set; }
         public int? RestTimeAfter { get; set; }
+        public bool IsAssignedForQueriedInstance { get; set; }
     }
 }

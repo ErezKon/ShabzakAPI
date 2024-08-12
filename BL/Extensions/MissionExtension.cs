@@ -26,31 +26,13 @@ namespace BL.Extensions
 
         public static DataLayer.Models.Mission Encrypt(this DataLayer.Models.Mission mission)
         {
-            mission.Name = encryptor.Encrypt(mission.Name);
-            mission.Description = encryptor.Encrypt(mission.Description);
-            if(!string.IsNullOrEmpty(mission.FromTime))
-            {
-                mission.FromTime = encryptor.Encrypt(mission.FromTime);
-            }
-            if (!string.IsNullOrEmpty(mission.FromTime))
-            {
-                mission.ToTime = encryptor.Encrypt(mission.ToTime);
-            }
-            return mission;
+            var ret = Translators.Extensions.MissionExtension.Encrypt(mission);
+            return ret;
         }
         public static DataLayer.Models.Mission Decrypt(this DataLayer.Models.Mission mission)
         {
-            mission.Name = encryptor.Decrypt(mission.Name);
-            mission.Description = encryptor.Decrypt(mission.Description);
-            if (!string.IsNullOrEmpty(mission.FromTime))
-            {
-                mission.FromTime = encryptor.Decrypt(mission.FromTime);
-            }
-            if (!string.IsNullOrEmpty(mission.FromTime))
-            {
-                mission.ToTime = encryptor.Decrypt(mission.ToTime);
-            }
-            return mission;
+            var ret = Translators.Extensions.MissionExtension.Decrypt(mission);
+            return ret;
         }
     }
 }

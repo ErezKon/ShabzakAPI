@@ -85,5 +85,32 @@ namespace BL.Services
                 throw;
             }
         }
+
+        public void LoadSoldiersFromFile(string filePath)
+        {
+            var lines = File.ReadAllLines(filePath).Skip(1);
+            var data = lines
+                .Select(l =>
+                {
+                    var spl = l.Split("\t");
+                    var ret = new DataLayer.Models.Soldier
+                    {
+                        Id = 0,
+                        Name = spl[1],
+                        PersonalNumber = spl[2],
+                        Phone = spl[3],
+                        Platoon = spl[4],
+                        Company = spl[5],
+                        Position = spl[6],
+                        Active = spl[7] == "1"
+
+                    };
+                    return ret;
+                })
+                .ToList();
+            using var db = new DataLayer.ShabzakDB();
+            db.Soldiers.AddRange(data);
+            db.SaveChanges();
+        }
     }
 }

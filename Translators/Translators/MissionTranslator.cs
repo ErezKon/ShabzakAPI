@@ -25,6 +25,7 @@ namespace Translators.Translators
                     FromTime = mis.FromTime,
                     ToTime = mis.ToTime,
                     IsSpecial = mis.IsSpecial,
+                    RequiredInstances = mis.RequiredInstances,
                     Positions = mis.MissionPositions
                         ?.Select(mp => MissionPositionTranslator.ToBL(mp))
                         ?.ToList()
@@ -55,6 +56,7 @@ namespace Translators.Translators
                 FromTime = mis.FromTime,
                 ToTime = mis.ToTime,
                 IsSpecial = mis.IsSpecial,
+                RequiredInstances = mis.RequiredInstances,
                 MissionPositions = mis.Positions
                     ?.Select(mp => MissionPositionTranslator.ToDB(mp))
                     ?.ToList()

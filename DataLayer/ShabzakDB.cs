@@ -20,7 +20,7 @@ namespace DataLayer
         {
             if (!optionsBuilder.IsConfigured)
             {
-                var connectionString = @"Data Source=W11JZYGKG3\SQLEXPRESS;Initial Catalog=ShabzakDB;Integrated Security=True;Multiple Active Result Sets=True;Trust Server Certificate=True;Packet Size=16000;";
+                var connectionString = @"Data Source=W11JZYGKG3;Initial Catalog=ShabzakDB;Integrated Security=True;Multiple Active Result Sets=True;Trust Server Certificate=True;Packet Size=16000;";
                 optionsBuilder.UseSqlServer(connectionString, builder => { 
                     builder.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
                 });
@@ -94,7 +94,7 @@ namespace DataLayer
                 entity.HasOne(e => e.Mission)
                     .WithMany(e => e.MissionInstances)
                     .HasForeignKey(e => e.MissionId)
-                    .OnDelete(DeleteBehavior.NoAction);
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<SoldierMission>(entity =>
@@ -108,16 +108,20 @@ namespace DataLayer
                 entity.Property(e => e.MissionPositionId)
                     .IsRequired();
 
-                entity.HasOne(e => e.MissionInstance)
-                    .WithMany(e => e.Soldiers)
-                    .HasForeignKey(e => e.SoldierId)
-                    .HasForeignKey(e => e.MissionInstanceId)
-                    .OnDelete(DeleteBehavior.NoAction);
-
                 entity.HasOne(e => e.Soldier)
-                    .WithMany(e => e.Missions)
-                    .HasForeignKey(e => e.MissionInstanceId)
-                    .OnDelete(DeleteBehavior.NoAction);
+                .WithMany(e => e.Missions)
+                .HasForeignKey(e => e.SoldierId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.MissionInstance)
+                .WithMany(e => e.Soldiers)
+                .HasForeignKey(e => e.MissionInstanceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.MissionPosition)
+                .WithMany(e => e.Soldiers)
+                .HasForeignKey(e => e.MissionPositionId)
+                .OnDelete(DeleteBehavior.NoAction);
             });
 
             modelBuilder.Entity<MissionPositions>(entity =>
@@ -135,9 +139,9 @@ namespace DataLayer
                     .WithMany(e => e.MissionPositions)
                     .HasForeignKey(e => e.MissionId);
 
-                entity.HasMany(e => e.Soldiers)
-                    .WithOne(e => e.MissionPosition)
-                    .HasForeignKey(e => e.MissionInstanceId);
+                //entity.HasMany(e => e.Soldiers)
+                //    .WithOne(e => e.MissionPosition)
+                //    .HasForeignKey(e => e.MissionInstanceId);
             });
 
             modelBuilder.Entity<Vacation>(entity =>

@@ -16,6 +16,7 @@ namespace BL.Cache
         private static MissionsCache Instance { get; set; }
         public static IEnumerable<Mission> Missions { get; private set; } = new List<Mission>();
         public static IEnumerable<DataLayer.Models.Mission> DbMissions { get; private set; }
+        private static Dictionary<int, Mission> missionDic = new();
         private MissionsCache()
         {
             Logger.Log("Creating Mission Cache");
@@ -39,6 +40,10 @@ namespace BL.Cache
                 .Select(s => MissionTranslator.ToBL(s))
                 .ToList();
 
+            missionDic = Missions
+                .GroupBy(m => m.Id)
+                .ToDictionary(m => m.Key, m => m.Single());
+
             Logger.Log($"Loaded {Missions.Count()} Missions to cache");
         }
 
@@ -59,6 +64,18 @@ namespace BL.Cache
 
         public List<Mission> GetMissions() => Missions.ToList();
         public List<DataLayer.Models.Mission> GetDBMissions() => DbMissions.ToList();
+
+        public Mission GetMissionById(int id)
+        {
+            lock (missionDic)
+            {
+                if (missionDic.ContainsKey(id))
+                {
+                    return missionDic[id];
+                }
+            }
+            return null;
+        }
 
         public void UpdateMission(Mission Mission)
         {

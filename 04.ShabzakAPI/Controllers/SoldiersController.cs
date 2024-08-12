@@ -20,6 +20,7 @@ namespace _04.ShabzakAPI.Controllers
         {
             _soldiersCache = soldiersCache;
             _soldierService = soldierService;
+            //soldierService.LoadSoldiersFromFile(@"C:\Users\Erez_Konforti\OneDrive - Dell Technologies\Documents\Shabzak Assets\soldiers.txt");
         }
 
         [HttpGet("LoadCSV")]

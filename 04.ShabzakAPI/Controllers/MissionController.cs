@@ -129,5 +129,11 @@ namespace ShabzakAPI.Controllers
             var ret = _missionService.GetMissionInstances(missionId);
             return ret;
         }
+
+        [HttpPost("AssignSoldiersToMissionInstance")]
+        public void AssignSoldiersToMissionInstance(List<SoldierMission> soldiers)
+        {
+            _missionService.AssignSoldiersToMissionInstance(soldiers);
+        }
     }
 }

@@ -15,14 +15,18 @@ namespace Translators.Translators
             {
                 return null;
             }
+            var soldierMissions = new List<SoldierMission>();
+            foreach(var s in missionInstance.Soldiers ?? []) 
+            {
+                var sm = SoldierMissionTranslator.ToBL(s, includeSoldier, includeMission);
+                soldierMissions.Add(sm);
+            }
             return new MissionInstance
             {
                 Id = missionInstance.Id,
-                FromTime = missionInstance.FromTime.ToString("dd/MM/yyyy hh:mm"),
-                ToTime = missionInstance.ToTime.ToString("dd/MM/yyyy hh:mm"),
-                SoldierMissions = missionInstance.Soldiers
-                    ?.Select(s => SoldierMissionTranslator.ToBL(s, includeSoldier, includeMission))
-                    ?.ToList() ?? []
+                FromTime = missionInstance.FromTime.ToString("dd/MM/yyyy HH:mm"),
+                ToTime = missionInstance.ToTime.ToString("dd/MM/yyyy HH:mm"),
+                SoldierMissions = soldierMissions
             };
         }
         public static DataLayer.Models.MissionInstance ToDB(MissionInstance missionInstance)

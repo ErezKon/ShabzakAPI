@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Translators.Models;
+using Translators.Extensions;
 
 namespace Translators.Translators
 {
@@ -22,10 +23,24 @@ namespace Translators.Translators
 
         public static SoldierMission ToBL(DataLayer.Models.SoldierMission sol, bool includeSoldier = true, bool includeMission = false)
         {
+            Soldier soldier = null;
+            if (includeSoldier && sol.Soldier != null)
+            {
+                DataLayer.Models.Soldier dbSoldier = sol.Soldier;
+                try
+                {
+                    dbSoldier = dbSoldier.Decrypt();
+                }
+                catch (Exception)
+                {
+                
+                }
+                soldier = SoldierTranslator.ToBL(dbSoldier);
+            }
             return new SoldierMission
             {
                 Id = sol.Id,
-                Soldier = includeSoldier ? SoldierTranslator.ToBL(sol.Soldier) : null,
+                Soldier = soldier,
                 MissionInstance = includeMission ? MissionInstanceTranslator.ToBL(sol.MissionInstance, includeMission) : null,
                 MissionPosition = MissionPositionTranslator.ToBL(sol.MissionPosition)
             };

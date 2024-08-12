@@ -4,7 +4,7 @@ using BL.Logging;
 using BL.Models;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using System.Reflection;
+using System.Transactions;
 using Translators.Models;
 
 namespace BL.Services
@@ -27,26 +27,8 @@ namespace BL.Services
                 .ToList();
 
 
-            var ret = temp.Select(m => m.Decrypt().ToBL())
+            var ret = temp.Select(m => m.Decrypt().ToBL(includeSoldier: true))
                 .ToList();
-
-            foreach (var mission in ret)
-            {
-                foreach(var instance in mission.MissionInstances)
-                {
-                    foreach(var soldierMission in instance.SoldierMissions)
-                    {
-                        try
-                        {
-                            soldierMission.Soldier = soldierMission.Soldier.Decrypt();
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Log("Can't decrypt soldier.");
-                        }
-                    }
-                }
-            }
             return ret;
         }
 
@@ -72,7 +54,15 @@ namespace BL.Services
             try
             {
                 using var db = new DataLayer.ShabzakDB();
+                var instances = mission.MissionInstances.ToList();
+                mission.MissionInstances = [];
                 db.Missions.Add(mission.Encrypt());
+                db.SaveChanges();
+                foreach(var instance in instances)
+                {
+                    instance.MissionId = mission.Id;
+                    db.MissionInstances.Add(instance);
+                }
                 db.SaveChanges();
                 MissionsCache.ReloadAsync();
                 return mission.Decrypt().ToBL();
@@ -131,16 +121,8 @@ namespace BL.Services
             try
             {
                 using var db = new DataLayer.ShabzakDB();
-                var mission = GetDBMissionById(db, missionId, false, false);
-                //foreach(var mp in mission.MissionPositions)
-                //{
-                //    mp.Mission = null;
-                //}
-                //foreach (var mi in mission.MissionInstances)
-                //{
-                //    mi.Mission = null;
-                //}
-                Logger.Log($"Found Mission:\n {JsonConvert.SerializeObject(mission.Decrypt(), Formatting.Indented)}");
+                var mission = GetDBMissionById(db, missionId);
+                Logger.Log($"Found Mission:\n {JsonConvert.SerializeObject(mission.Clone().HideLists().Decrypt(), Formatting.Indented)}");
                 db.Missions.Remove(mission);
                 db.SaveChanges();
                 MissionsCache.ReloadAsync();
@@ -160,20 +142,6 @@ namespace BL.Services
             var instance = db.MissionInstances
                 .Include(m => m.Soldiers)
                 .FirstOrDefault(i => i.Id == missionInstanceId) ?? throw new ArgumentException("Mission Instance not found.");
-            
-            //foreach (var soldierMission in soldiers)
-            //{
-            //    var soldier = db.Soldiers
-            //    .FirstOrDefault(s => s.Id == soldierMission.SoldierId) ?? throw new ArgumentException("Soldier not found");
-            //    var missionPosition = db.MissionPositions
-            //        .FirstOrDefault(pos => pos.Id == soldierMission.MissionPositionId) ?? throw new ArgumentException("Mission Position not found");
-
-            //    soldierMission.MissionPosition = missionPosition;
-            //    soldierMission.Soldier = soldier;
-            //    soldierMission.MissionInstance = instance;
-
-            //    instance.Soldiers.Add(soldierMission);
-            //}
 
             instance.Soldiers ??= new();
             instance.Soldiers.AddRange(soldiers);
@@ -216,6 +184,16 @@ namespace BL.Services
                     Soldier = _soldiersCache.GetSoldierById(soldierId),
                 };
                 model.Soldier.Missions = [];
+                var assignedForInstance = db.SoldierMission
+                    .Count(sm => sm.SoldierId == soldierId && sm.MissionInstanceId == missionInstanceId) > 0;
+                if(assignedForInstance)
+                {
+                    model.IsAssignedForQueriedInstance = true;
+                    model.RestTimeAfter = 0;
+                    model.RestTimeBefore = 0;
+                    ret.Add(model);
+                    continue;
+                }
                 var soldierMissions = db.SoldierMission
                     .Where(mi => mi.SoldierId == soldierId)
                     .Include(sm => sm.MissionInstance)
@@ -226,6 +204,12 @@ namespace BL.Services
                 {
                     foreach (var sm in soldierMissions)
                     {
+                        if(OverlappingTimes(startTime, endTime, sm.MissionInstance.FromTime, sm.MissionInstance.ToTime))
+                        {
+                            model.RestTimeBefore = 0;
+                            model.RestTimeAfter = 0;
+                            break;
+                        }
                         if(sm.MissionInstance.ToTime <= startTime)
                         {
                             var diff = startTime - sm.MissionInstance.ToTime;
@@ -239,6 +223,13 @@ namespace BL.Services
                     }
                 }
                 ret.Add(model);
+            }
+
+            foreach (var r in ret)
+            {
+                r.Soldier.Positions = r.Soldier.Positions
+                    .OrderByDescending(p => p)
+                    .ToList();
             }
 
             return ret
@@ -257,6 +248,64 @@ namespace BL.Services
                 .ToList();
 
             return instances;
+        }
+
+        public void AssignSoldiersToMissionInstance(List<SoldierMission> soldiers)
+        {
+            if (soldiers == null || soldiers.Count == 0)
+            {
+                throw new ArgumentNullException("No Soldiers provided.");
+            }
+            var instances = soldiers.Select(s => s.MissionInstance.Id).ToList().Distinct();
+            if (instances.Count() != 1)
+            {
+                throw new ArgumentException("Different mission instances provided.");
+            }
+            var missionInstance = instances.First();
+            var data = soldiers
+                .Select(s => new DataLayer.Models.SoldierMission
+                {
+                    Id = 0,
+                    SoldierId = s.Soldier.Id,
+                    MissionInstanceId = s.MissionInstance.Id,
+                    MissionPositionId = s.MissionPosition.Id,
+                })
+                .ToList();
+            using var db = new DataLayer.ShabzakDB();
+            var existingAssignments = db.SoldierMission
+                .Where(mi => mi.MissionInstanceId == missionInstance)
+                .ToList();
+
+            foreach (var existingAssignment in existingAssignments)
+            {
+                var assignments = data
+                    .Where(mi => mi.MissionInstanceId == existingAssignment.MissionInstanceId && mi.SoldierId == existingAssignment.SoldierId)
+                    .Count();
+                if (assignments == 0)
+                {
+                    db.SoldierMission.Remove(existingAssignment);
+                }
+            }
+            foreach(var assignment in data)
+            {
+                var existingAssignment = existingAssignments
+                    .Where(a => a.MissionInstanceId == assignment.MissionInstanceId && a.SoldierId == assignment.SoldierId)
+                    .Count();
+                if(existingAssignment == 0)
+                {
+                    db.SoldierMission.Add(assignment);
+                }
+            }
+
+            db.SaveChanges();
+        }
+
+        private bool OverlappingTimes(DateTime startTime1, DateTime endTime1, DateTime startTime2, DateTime endTime2)
+        {
+            return startTime1.IsBetweenDates(startTime2, endTime2) ||
+                startTime2.IsBetweenDates(startTime1, endTime1) ||
+                endTime1.IsBetweenDates(startTime2, endTime2) ||
+                endTime2.IsBetweenDates(startTime1, endTime1);
         }
     }
 }
