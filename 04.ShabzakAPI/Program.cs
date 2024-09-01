@@ -4,13 +4,6 @@ using DataLayer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-//builder.Services.AddDbContext<RemoteDB>();
-//var remote = new RemoteDB();
-//remote.Database.EnsureCreated();
-//remote.SaveChanges();
-//remote.Dispose();
-
 builder.Services.AddControllers();
 builder.Services.AddDbContext<ShabzakDB>();
 var db = new ShabzakDB();
@@ -29,6 +22,12 @@ builder.Services.AddSingleton(soldierService);
 
 var missionService = new MissionService(soldiersCache);
 builder.Services.AddSingleton(missionService);
+
+var metadataService = new MetadataService(soldiersCache, missionsCache);
+builder.Services.AddSingleton(metadataService);
+
+var autoAssignService = new AutoAssignService(soldiersCache, missionsCache, missionService);
+builder.Services.AddSingleton(autoAssignService);
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

@@ -95,5 +95,43 @@ namespace BL.Extensions
 
         public static Soldier ToBL(this DataLayer.Models.Soldier soldier) => SoldierTranslator.ToBL(soldier);
         public static DataLayer.Models.Soldier ToDB(this Soldier soldier) => SoldierTranslator.ToDB(soldier);
+
+        public static bool IsCommander(this Soldier soldier)
+        {
+            var commandingPositions = new List<Position>
+            {
+                Position.ClassCommander,
+                Position.Sergant,
+                Position.PlatoonCommander,
+                Position.CompanyDeputy,
+                Position.CompanyCommander
+            };
+            return soldier.Positions.Any(p =>  commandingPositions.Contains(p));
+        }
+
+        public static bool IsOfficer(this Soldier soldier)
+        {
+            var commandingPositions = new List<Position>
+            {
+                Position.PlatoonCommander,
+                Position.CompanyDeputy,
+                Position.CompanyCommander
+            };
+            return soldier.Positions.Any(p => commandingPositions.Contains(p));
+        }
+
+        public static List<DataLayer.Models.Position> GetSoldierPositions(this DataLayer.Models.Soldier soldier)
+        {
+            return soldier.Position.Split([','], StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s =>
+                    {
+                        if (int.TryParse(s, out int numericValue))
+                        {
+                            return (DataLayer.Models.Position)numericValue;
+                        }
+                        return DataLayer.Models.Position.Simple;
+                    })
+                    .ToList();
+        }
     }
 }

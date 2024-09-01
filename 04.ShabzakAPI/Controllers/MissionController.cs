@@ -16,10 +16,12 @@ namespace ShabzakAPI.Controllers
         private readonly MissionService _missionService;
 
         private readonly SoldiersCache _soldiersCache;
-        public MissionController(MissionService missionService, SoldiersCache soldiersCache)
+        private readonly AutoAssignService _autoAssignService;
+        public MissionController(MissionService missionService, SoldiersCache soldiersCache, AutoAssignService autoAssignService)
         {
             _missionService = missionService;
             _soldiersCache = soldiersCache;
+            _autoAssignService = autoAssignService;
         }
 
         [HttpGet("GetMissions")]
@@ -134,6 +136,12 @@ namespace ShabzakAPI.Controllers
         public void AssignSoldiersToMissionInstance(List<SoldierMission> soldiers)
         {
             _missionService.AssignSoldiersToMissionInstance(soldiers);
+        }
+
+        [HttpGet("AutoAssign")]
+        public void AutoAssign()
+        {
+            _autoAssignService.AutoAssign(DateTime.Now.AddDays(-7), DateTime.Now.AddDays(7));
         }
     }
 }

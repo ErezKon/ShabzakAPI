@@ -56,12 +56,16 @@ namespace Translators.Translators
                 Platoon = sol.Platoon,
                 Company = sol.Company,
                 Active = sol.Active,
-                Position = string.Join(",", sol.Positions.Select(p => ((int)p).ToString()).ToArray()),
+                Position = string.Join(",", sol.Positions
+                .Order()
+                .Select(p => ((int)p).ToString())
+                .ToArray()),
                 Vacations = sol.Vacations
                 ?.Select(v => VacationTranslator.ToDB(v))
                 ?.ToList()
                 ?? []
             };
         }
+
     }
 }

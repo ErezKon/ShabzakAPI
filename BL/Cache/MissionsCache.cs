@@ -30,8 +30,9 @@ namespace BL.Cache
         {
             using var db = new DataLayer.ShabzakDB();
             DbMissions = db.Missions
-                .Include(m => m.MissionInstances)
                 .Include(m => m.MissionPositions)
+                .Include(m => m.MissionInstances)
+                .ThenInclude(mi => mi.Soldiers)
                 .ToList()
                 .Select(s => s.Decrypt())
                 .ToList();
@@ -65,13 +66,18 @@ namespace BL.Cache
         public List<Mission> GetMissions() => Missions.ToList();
         public List<DataLayer.Models.Mission> GetDBMissions() => DbMissions.ToList();
 
-        public Mission GetMissionById(int id)
+        public Mission GetMissionById(int id, bool includeInstances = true)
         {
             lock (missionDic)
             {
                 if (missionDic.ContainsKey(id))
                 {
-                    return missionDic[id];
+                    var mission = missionDic[id];
+                    if(!includeInstances)
+                    {
+                        mission.MissionInstances = [];
+                    }
+                    return mission;
                 }
             }
             return null;

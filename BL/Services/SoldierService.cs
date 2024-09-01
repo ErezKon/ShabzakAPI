@@ -14,6 +14,10 @@ namespace BL.Services
 {
     public class SoldierService
     {
+        private readonly PositionHelper positionHelper = new();
+        public SoldierService()
+        {
+        }
         public Soldier AddSoldier(Soldier soldier)
         {
             return AddSoldier(soldier.ToDB());
@@ -24,6 +28,7 @@ namespace BL.Services
             Logger.Log($"Adding Soldier:\n {JsonConvert.SerializeObject(soldier, Formatting.Indented)}");
             try
             {
+                NormalizePositions(soldier);
                 using var db = new DataLayer.ShabzakDB();
                 db.Soldiers.Add(soldier.Encrypt());
                 db.SaveChanges();
@@ -34,6 +39,36 @@ namespace BL.Services
             {
                 Logger.Log($"Error while adding soldier:\n{ex}");
                 throw;
+            }
+        }
+
+        private void NormalizePositions(DataLayer.Models.Soldier soldier)
+        {
+            var positions = soldier.GetSoldierPositions();
+            var positionAdded = false;
+            var commandingPositions = positionHelper.CommandingPositions;
+            if(commandingPositions.Any(cp => positions.Contains(cp)))
+            {
+                return;
+            }
+            if (!positions.Any(p => p == DataLayer.Models.Position.Simple))
+            {
+                foreach (var position in positions)
+                {
+                    if (positionHelper.SimplePositions.Contains(position))
+                    {
+                        positions.Add(DataLayer.Models.Position.Simple);
+                        positionAdded = true;
+                        break;
+                    }
+                }
+                if (positionAdded)
+                {
+                    soldier.Position = string.Join(",", positions
+                        .Order()
+                        .Select(p => ((int)p).ToString())
+                        .ToArray());
+                }
             }
         }
         public Soldier Update(Soldier soldier) => Update(soldier.ToDB());

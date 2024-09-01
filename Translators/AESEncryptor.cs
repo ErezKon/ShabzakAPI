@@ -18,9 +18,12 @@ namespace BL
         private static readonly Dictionary<string, string> encryptionDic = [];
         public string Encrypt(string plainText)
         {
-            if(encryptionDic.ContainsKey(plainText))
+            lock (encryptionDic)
             {
-                return encryptionDic[plainText];
+                if (encryptionDic.ContainsKey(plainText))
+                {
+                    return encryptionDic[plainText];
+                }
             }
             byte[] encrypted;
 
@@ -45,7 +48,10 @@ namespace BL
             }
             // Return the encrypted bytes from the memory stream. 
             var enc = Convert.ToBase64String(encrypted);
-            encryptionDic[plainText] = enc;
+            lock (encryptionDic)
+            {
+                encryptionDic[plainText] = enc;
+            }
             return enc;
         }
 
@@ -56,9 +62,12 @@ namespace BL
             { 
                 throw new ArgumentNullException("cipherText cannot be null");
             }
-            if (decryptionDic.ContainsKey(cipherText))
+            lock(decryptionDic)
             {
-                return decryptionDic[cipherText];
+                if (decryptionDic.ContainsKey(cipherText))
+                {
+                    return decryptionDic[cipherText];
+                }
             }
             // Declare the string used to hold 
             // the decrypted text. 
@@ -84,7 +93,10 @@ namespace BL
                 plaintext = srDecrypt.ReadToEnd();
 
             }
-            decryptionDic[cipherText] = plaintext;
+            lock (decryptionDic)
+            {
+                decryptionDic[cipherText] = plaintext;
+            }
             return plaintext;
         }
 
