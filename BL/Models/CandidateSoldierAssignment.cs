@@ -13,5 +13,6 @@ namespace BL.Models
         public MissionInstance MissionInstance { get; set; }
         public double Rank { get; set; }
         public int? MissionsAssignedTo { get; set; }
+        public Dictionary<string,double> RankBreakdown { get; set; }
     }
 }

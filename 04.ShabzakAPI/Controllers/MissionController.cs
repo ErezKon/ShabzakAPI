@@ -139,9 +139,10 @@ namespace ShabzakAPI.Controllers
         }
 
         [HttpGet("AutoAssign")]
-        public void AutoAssign()
+        public AssignmentValidationModel AutoAssign()
         {
-            _autoAssignService.AutoAssign(DateTime.Now.AddDays(-7), DateTime.Now.AddDays(7));
+            var ret = _autoAssignService.AutoAssign(DateTime.Now.AddDays(-7), DateTime.Now.AddDays(7));
+            return ret;
         }
     }
 }

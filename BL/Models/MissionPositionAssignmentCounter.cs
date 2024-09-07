@@ -12,5 +12,7 @@ namespace BL.Models
         public int MissionPositionId { get; set; }
         public Position Position { get; set; }
         public int Count { get; set; }
+
+        public MissionPositions MissionPosition { get; set; }
     }
 }

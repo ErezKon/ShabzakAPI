@@ -56,6 +56,19 @@ namespace BL.Services
                 using var db = new DataLayer.ShabzakDB();
                 var instances = mission.MissionInstances.ToList();
                 mission.MissionInstances = [];
+                if(mission.IsSpecial)
+                {
+                    var startTime = Convert.ToDateTime(instances.First().FromTime);
+                    var endTime = startTime.AddHours(mission.Duration);
+                    var instance = new DataLayer.Models.MissionInstance
+                    {
+                        Id = 0,
+                        FromTime = startTime,
+                        ToTime = endTime,
+                        MissionId = mission.Id,
+                    };
+                    instances = [instance];
+                }
                 db.Missions.Add(mission.Encrypt());
                 db.SaveChanges();
                 foreach(var instance in instances)

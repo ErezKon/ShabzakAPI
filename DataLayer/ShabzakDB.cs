@@ -159,6 +159,20 @@ namespace DataLayer
                     .WithMany(e => e.Vacations)
                     .HasForeignKey(e => e.SoldierId);
             });
+
+            modelBuilder.Entity<SoldierMissionCandidate>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.SoldierId)
+                    .IsRequired();
+                entity.Property(e => e.MissionInstanceId)
+                    .IsRequired();
+                entity.Property(e => e.MissionPositionId)
+                    .IsRequired();
+                entity.Property(e => e.CandidateId)
+                    .IsRequired();
+            });
         }
 
         public DbSet<Soldier> Soldiers { get; set; }
@@ -166,6 +180,7 @@ namespace DataLayer
         public DbSet<MissionInstance> MissionInstances { get; set; }
         public DbSet<MissionPositions> MissionPositions { get; set; }
         public DbSet<SoldierMission> SoldierMission { get; set; }
+        public DbSet<SoldierMissionCandidate> SoldierMissionCandidates { get; set; }
         public DbSet<Vacation> Vacations { get; set; }
     }
 }

@@ -13,7 +13,6 @@ namespace BL.Extensions
         private static readonly string naEncrypted;
         private static readonly AESEncryptor encryptor;
 
-
         static SoldierExtension() 
         {
             encryptor = new AESEncryptor();
@@ -98,26 +97,12 @@ namespace BL.Extensions
 
         public static bool IsCommander(this Soldier soldier)
         {
-            var commandingPositions = new List<Position>
-            {
-                Position.ClassCommander,
-                Position.Sergant,
-                Position.PlatoonCommander,
-                Position.CompanyDeputy,
-                Position.CompanyCommander
-            };
-            return soldier.Positions.Any(p =>  commandingPositions.Contains(p));
+            return soldier.Positions.Any(p => p.IsCommandingPosition());
         }
 
         public static bool IsOfficer(this Soldier soldier)
         {
-            var commandingPositions = new List<Position>
-            {
-                Position.PlatoonCommander,
-                Position.CompanyDeputy,
-                Position.CompanyCommander
-            };
-            return soldier.Positions.Any(p => commandingPositions.Contains(p));
+            return soldier.Positions.Any(p => p.IsOfficerPosition());
         }
 
         public static List<DataLayer.Models.Position> GetSoldierPositions(this DataLayer.Models.Soldier soldier)

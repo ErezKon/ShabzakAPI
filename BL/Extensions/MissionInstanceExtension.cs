@@ -10,7 +10,7 @@ namespace BL.Extensions
 {
     public static class MissionInstanceExtension
     {
-        public static MissionInstance ToBL(this DataLayer.Models.MissionInstance missionInstance) => MissionInstanceTranslator.ToBL(missionInstance);
+        public static MissionInstance ToBL(this DataLayer.Models.MissionInstance missionInstance, bool includeMission = true, bool includeSoldier = true) => MissionInstanceTranslator.ToBL(missionInstance,includeMission, includeSoldier);
 
         public static DataLayer.Models.MissionInstance ToDB(this MissionInstance missionInstance) => MissionInstanceTranslator.ToDB(missionInstance);
     }
