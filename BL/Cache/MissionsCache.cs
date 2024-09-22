@@ -25,6 +25,13 @@ namespace BL.Cache
                 ReloadCache();
             }, null, TimeSpan.Zero, TimeSpan.FromMinutes(5));
         }
+        public static Task ReloadAsync()
+        {
+            return Task.Factory.StartNew(() =>
+            {
+                ReloadCache();
+            });
+        }
 
         public static void ReloadCache()
         {
@@ -96,14 +103,6 @@ namespace BL.Cache
             Missions = Missions
                 .Union([Mission])
                 .ToList();
-        }
-
-        public static Task ReloadAsync()
-        {
-            return Task.Factory.StartNew(() =>
-            {
-                ReloadCache();
-            });
         }
     }
 

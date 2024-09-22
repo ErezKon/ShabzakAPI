@@ -68,6 +68,8 @@ namespace DataLayer
                     .IsRequired();
                 entity.Property(e => e.Duration)
                     .IsRequired();
+                entity.Property(e => e.SimulateDuration)
+                    .HasDefaultValue(null);
                 entity.Property(e => e.IsSpecial)
                     .IsRequired();
 

@@ -9,7 +9,7 @@ namespace Translators.Translators
 {
     public abstract class SoldierTranslator
     {
-        public static Soldier ToBL(DataLayer.Models.Soldier sol)
+        public static Soldier ToBL(DataLayer.Models.Soldier sol, bool includeMissions = true, bool includeVacations = true)
         {
             if(sol == null)
             {
@@ -24,7 +24,7 @@ namespace Translators.Translators
                 Platoon = sol.Platoon,
                 Company = sol.Company,
                 Active = sol.Active,
-                Positions = sol.Position.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                Positions = sol.Position.Split(",", StringSplitOptions.RemoveEmptyEntries)
                     .Select(s =>
                     {
                         if(int.TryParse(s, out int numericValue))
@@ -34,13 +34,17 @@ namespace Translators.Translators
                         return Position.Simple;
                     })
                     .ToList(),
-                Vacations = sol.Vacations
-                ?.Select(v => VacationTranslator.ToBL(v))
-                ?.ToList()
-                ?? [],
-                Missions = sol.Missions
-                    ?.Select(m => SoldierMissionTranslator.ToBL(m, false))
-                    ?.ToList() ?? []
+                Vacations = includeVacations ? 
+                            sol.Vacations
+                                ?.Select(v => VacationTranslator.ToBL(v))
+                                ?.ToList()
+                                ?? [] :
+                            [],
+                Missions = includeMissions ?
+                           sol.Missions
+                               ?.Select(m => SoldierMissionTranslator.ToBL(m, false))
+                               ?.ToList() ?? [] :
+                           []
             };
         }
 

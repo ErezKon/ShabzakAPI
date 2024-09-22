@@ -138,10 +138,17 @@ namespace ShabzakAPI.Controllers
             _missionService.AssignSoldiersToMissionInstance(soldiers);
         }
 
-        [HttpGet("AutoAssign")]
-        public AssignmentValidationModel AutoAssign()
+        [HttpPost("AutoAssign")]
+        public List<AssignmentValidationModel> AutoAssign(AutoAssignModel model)
         {
-            var ret = _autoAssignService.AutoAssign(DateTime.Now.AddDays(-7), DateTime.Now.AddDays(7));
+            var ret = _autoAssignService.AutoAssign(model.StartDate, model.EndDate, model.Missions, model.Soldiers);
+            return [ret];
+        }
+
+        [HttpPost("AcceptAssignCandidate")]
+        public List<Mission> AcceptAssignCandidate(string candidateId)
+        {
+            var ret = _autoAssignService.AcceptAutoAssignCandidate(candidateId);
             return ret;
         }
     }

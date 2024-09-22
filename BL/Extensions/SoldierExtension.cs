@@ -92,7 +92,7 @@ namespace BL.Extensions
             return soldier;
         }
 
-        public static Soldier ToBL(this DataLayer.Models.Soldier soldier) => SoldierTranslator.ToBL(soldier);
+        public static Soldier ToBL(this DataLayer.Models.Soldier soldier, bool includeMissions = true, bool includeVacations = true) => SoldierTranslator.ToBL(soldier, includeMissions, includeVacations);
         public static DataLayer.Models.Soldier ToDB(this Soldier soldier) => SoldierTranslator.ToDB(soldier);
 
         public static bool IsCommander(this Soldier soldier)
@@ -107,7 +107,7 @@ namespace BL.Extensions
 
         public static List<DataLayer.Models.Position> GetSoldierPositions(this DataLayer.Models.Soldier soldier)
         {
-            return soldier.Position.Split([','], StringSplitOptions.RemoveEmptyEntries)
+            return soldier.Position.Split(",", StringSplitOptions.RemoveEmptyEntries)
                     .Select(s =>
                     {
                         if (int.TryParse(s, out int numericValue))
