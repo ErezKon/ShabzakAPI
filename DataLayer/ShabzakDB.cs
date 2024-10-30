@@ -20,7 +20,7 @@ namespace DataLayer
         {
             if (!optionsBuilder.IsConfigured)
             {
-                var connectionString = @"Data Source=W11JZYGKG3;Initial Catalog=ShabzakDB;Integrated Security=True;Multiple Active Result Sets=True;Trust Server Certificate=True;Packet Size=16000;";
+                var connectionString = @"Data Source=W11GC68DS3\SQLEXPRESS;Initial Catalog=ShabzakDB;Integrated Security=True;Multiple Active Result Sets=True;Trust Server Certificate=True;Packet Size=16000;";
                 optionsBuilder.UseSqlServer(connectionString, builder => { 
                     builder.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
                 });
@@ -175,6 +175,43 @@ namespace DataLayer
                 entity.Property(e => e.CandidateId)
                     .IsRequired();
             });
+
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Name)
+                    .IsRequired();
+                entity.Property(e => e.Password)
+                    .IsRequired();
+                entity.Property(e => e.Salt)
+                    .IsRequired();
+                entity.Property(e => e.Role)
+                    .IsRequired();
+                entity.Property(e => e.Activated)
+                    .HasDefaultValue(true)
+                    .IsRequired();
+                entity.Property(e => e.Enabled)
+                    .HasDefaultValue(false)
+                    .IsRequired();
+            });
+
+            //modelBuilder.Entity<UserToken>(entity =>
+            //{
+            //    entity.HasKey(e => e.Id);
+
+            //    entity.Property(e => e.Token)
+            //        .IsRequired();
+            //    entity.Property(e => e.Expiration)
+            //        .IsRequired();
+            //    entity.Property(e => e.UserId)
+            //        .IsRequired();
+
+
+            //    entity.HasOne(e => e.User)
+            //        .WithMany(e => e.UserTokens)
+            //        .HasForeignKey(e => e.UserId);
+            //});
         }
 
         public DbSet<Soldier> Soldiers { get; set; }
@@ -184,5 +221,7 @@ namespace DataLayer
         public DbSet<SoldierMission> SoldierMission { get; set; }
         public DbSet<SoldierMissionCandidate> SoldierMissionCandidates { get; set; }
         public DbSet<Vacation> Vacations { get; set; }
+        public DbSet<User> Users { get; set; }
+        //public DbSet<UserToken> UserTokens { get; set; }
     }
 }

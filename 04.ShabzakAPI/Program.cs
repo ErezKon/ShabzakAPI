@@ -10,6 +10,15 @@ var db = new ShabzakDB();
 db.Database.EnsureCreated();
 db.SaveChanges();
 db.Dispose();
+//builder.Services.AddDbContext<RemoteDB>();
+//var remotedb = new RemoteDB();
+//remotedb.Database.EnsureCreated();
+//remotedb.SaveChanges();
+//remotedb.Dispose();
+
+
+var usersCache = UsersCache.GetInstance();
+builder.Services.AddSingleton(usersCache);
 
 var soldiersCache = SoldiersCache.GetInstance();
 builder.Services.AddSingleton(soldiersCache);
@@ -28,6 +37,9 @@ builder.Services.AddSingleton(metadataService);
 
 var autoAssignService = new AutoAssignService(soldiersCache, missionsCache, missionService);
 builder.Services.AddSingleton(autoAssignService);
+
+var userService = new UserService(usersCache);
+builder.Services.AddSingleton(userService);
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

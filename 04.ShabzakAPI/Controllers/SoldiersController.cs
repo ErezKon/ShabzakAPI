@@ -73,17 +73,36 @@ namespace _04.ShabzakAPI.Controllers
             //return null;
 
             using var db = new DataLayer.ShabzakDB();
-            using var remote = new DataLayer.RemoteDB();
-            var soldiers = db.Soldiers
-                .ToList();
+           // using var remote = new DataLayer.RemoteDB();
 
-            foreach (var soldier in soldiers)
+            var missionsJson = System.IO.File.ReadAllText(@"C:\Users\Erez_Konforti\OneDrive - Dell Technologies\Documents\Shabzak data\missions-detailed.json");
+            var missions = JsonConvert.DeserializeObject<List<DataLayer.Models.Mission>>(missionsJson);
+            foreach (var mission in missions)
             {
-                soldier.Id = 0;
+                mission.Id = 0;
+
+                foreach (var instance in mission.MissionInstances)
+                {
+                    instance.MissionId = mission.Id;
+                    instance.Mission = mission;
+                }
+                foreach (var pos in mission.MissionPositions)
+                {
+                    pos.MissionId = mission.Id;
+                    pos.Mission = mission;
+                }
             }
 
-            remote.Soldiers.AddRange(soldiers);
-            remote.SaveChanges();
+            //var soldiers = db.Soldiers
+            //    .ToList();
+
+            //foreach (var soldier in soldiers)
+            //{
+            //    soldier.Id = 0;
+            //}
+
+            db.Missions.AddRange(missions);
+            db.SaveChanges();
 
             return null;
         }

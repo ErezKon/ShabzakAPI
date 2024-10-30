@@ -130,6 +130,10 @@ namespace BL.Cache
             });
         }
 
+        public bool Exist(int soldierId)
+        {
+            return soldiersDic.ContainsKey(soldierId);
+        }
         
     }
 }
