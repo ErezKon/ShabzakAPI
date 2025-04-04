@@ -151,5 +151,26 @@ namespace ShabzakAPI.Controllers
             var ret = _autoAssignService.AcceptAutoAssignCandidate(candidateId);
             return ret;
         }
+
+        [HttpPost("GetMissionInstancesInRange")]
+        public List<MissionInstance> GetMissionInstancesInRange(GetMissionInstancesRangesVM model)
+        {
+            var ret = _missionService.GetMissionInstancesInRange(model.From, model.To, model.FullDay, model.UnassignedOnly);
+            return ret;
+        }
+
+        [HttpGet("GetAllCandidates")]
+        public List<string> GetAllCandidates()
+        {
+            var ret = _autoAssignService.GetAllCandidates();
+            return ret;
+        }
+
+        [HttpPost("GetCandidate")]
+        public AssignmentValidationModel GetCandidate(string guid)
+        {
+            var ret = _autoAssignService.GetCandidate(guid);
+            return ret;
+        }
     }
 }

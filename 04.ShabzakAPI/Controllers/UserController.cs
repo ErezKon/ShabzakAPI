@@ -1,5 +1,7 @@
 ﻿using BL.Cache;
+using BL.Extensions;
 using BL.Services;
+using DataLayer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ShabzakAPI.ViewModels;
@@ -19,6 +21,41 @@ namespace ShabzakAPI.Controllers
         {
             _soldiersCache = soldiersCache;
             _userService = userService;
+        }
+
+        [HttpPost("ResetPassword")]
+        public string ResetPassword(string username, string password)
+        {
+            using var db = new ShabzakDB();
+            var encUsername = Sha512Encryptor.Encrypt(username);
+            //var users = db.Users
+            //    .ToList()
+            //    .Select(u => u.Decrypt())
+            //    .Where(u => u.Name.Equals(encUsername))
+            //    .ToList();
+
+            var cache = UsersCache.GetInstance();
+            var user = cache.GetUser(encUsername);
+
+            if (user == null)
+            {
+                return "User not found.";
+            }
+            //if (users.Count == 0)
+            //{
+            //    return "User not found.";
+            //}
+            //if (users.Count > 1)
+            //{
+            //    return "Username matches too many users";
+            //}
+
+            //var user = users.First();
+            var encPass = Sha512Encryptor.Encrypt(password);
+            var pass = Sha512Encryptor.Encrypt($"{encPass}{user.Salt}");
+            user.Password = pass;
+            db.SaveChanges();
+            return pass;
         }
 
         [HttpPost("Login")]

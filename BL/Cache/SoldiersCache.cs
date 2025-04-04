@@ -44,8 +44,11 @@ namespace BL.Cache
         public static void ReloadCache()
         {
             using var db = new DataLayer.ShabzakDB();
+            
+
             dbSoldiersDic = db.Soldiers
                 .Include(s => s.Missions)
+                .ThenInclude(m => m.MissionInstance)
                 .Include(s => s.Vacations)
                 .ToList()
                 .Select(s => s.Decrypt())
@@ -53,7 +56,7 @@ namespace BL.Cache
                 .ToDictionary(k => k.Key, v => v.Single());
 
             soldiersDic = DbSoldiers
-                .Select(s => SoldierTranslator.ToBL(s))
+                .Select(s => SoldierTranslator.ToBL(s, true, true, true))
                 .GroupBy(s => s.Id)
                 .ToDictionary(k => k.Key, v => v.Single());
 

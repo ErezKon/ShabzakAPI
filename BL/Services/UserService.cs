@@ -1,5 +1,6 @@
 ﻿using BL.Cache;
 using BL.Extensions;
+using DataLayer;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -54,20 +55,39 @@ namespace BL.Services
             {
                 throw new ArgumentNullException("Username or password cannot be null.");
             }
-            var user = _usersCache.GetUser(username);
-            if (user == null)
-            {
-                throw new ArgumentException("User not found.");
-            }
+            var user = _usersCache.GetUser(username) ?? throw new ArgumentException("User not found.");
             var encPass = Sha512Encryptor.Encrypt($"{password}{user.Salt}");
+            //var db = new ShabzakDB();
+            //var us = db.Users.FirstOrDefault(u => u.Id == 39);
+            //us.Password = encPass;
+            //db.SaveChanges();
             if (user.Password.Equals(encPass))
             {
+                //using var db = new DataLayer.ShabzakDB();
+                //var dbUser = db.Users
+                //    .FirstOrDefault(u => u.Id == user.Id);
+                ////dbUser.Password = encPass;
+                //dbUser.Activated = true;
+                //db.SaveChanges();
                 var ret = user.ToBL().LoadSoldier();
                 ret.Password = "";
                 ret.Salt = "";
-                ret.Soldier.Missions = [];
+                ret.Soldier.Missions = ret.Soldier?.Missions
+                    ?.Where(m => DateTime.Parse(m.MissionInstance.FromTime) > DateTime.Now)
+                    ?.ToList() ?? [];
+                //ret.Activated = true;
                 return ret;
             }
+            //var encryptor = new AESEncryptor();
+
+            //encPass = encryptor.Encrypt(encPass);
+            //////user.Decrypt();
+            //using var db = new DataLayer.ShabzakDB();
+            //var dbUser = db.Users
+            //    .FirstOrDefault(u => u.Id == user.Id);
+            ////dbUser.Password = encPass;
+            //dbUser.Activated = true;
+            //db.SaveChanges();
 
             return null;
         }

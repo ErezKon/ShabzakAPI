@@ -90,6 +90,14 @@ namespace DataLayer
 
                 entity.Property(e => e.MissionId)
                     .IsRequired();
+                entity.Property(e => e.FromTime)
+                    .IsRequired();
+                entity.Property(e => e.ToTime)
+                    .IsRequired();
+                entity.Property(mi => mi.IsFilled)
+                    .IsRequired()
+                    .HasDefaultValue(false);
+
                 entity.Property(e => e.FromTime);
                 entity.Property(e => e.ToTime);
 
@@ -193,6 +201,22 @@ namespace DataLayer
                     .IsRequired();
                 entity.Property(e => e.Enabled)
                     .HasDefaultValue(false)
+                    .IsRequired();
+            });
+
+            modelBuilder.Entity<AutoAssignmentsMeta>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Guid)
+                    .IsRequired();
+                entity.Property(e => e.From)
+                    .IsRequired();
+                entity.Property(e => e.To)
+                    .IsRequired();
+                entity.Property(e => e.Soldiers)
+                    .IsRequired();
+                entity.Property(e => e.Missions)
                     .IsRequired();
             });
 

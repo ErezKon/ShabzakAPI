@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Microsoft.EntityFrameworkCore.Storage.Internal;
 using DataLayer;
 using System.Linq;
+using System.Reflection;
 
 namespace BL.Services
 {
@@ -18,14 +19,16 @@ namespace BL.Services
         private readonly MissionsCache _missionsCache;
         private readonly MissionService _missionService;
         private readonly PositionHelper posHelper;
-        private readonly Dictionary<int, Dictionary<int, List<SoldierMission>>> soldierMissionsByMissionIdBySoldierId;
-        private readonly Dictionary<int, int> missionCountBySoldier;
 
         private Dictionary<int, List<Position>> soldierPositionCache = new Dictionary<int, List<Position>>();
         private List<Mission> missionAssignments;
         private List<Mission> selectedMissionAssignments;
+        private Dictionary<int, Dictionary<int, List<SoldierMission>>> soldierMissionsByMissionIdBySoldierId;
+        private Dictionary<int, int> missionCountBySoldier;
 
         private Dictionary<int, MissionInstance> missionInstanceDic;
+
+        private readonly Random rand = new Random();
         public AutoAssignService(SoldiersCache soldiersCache, MissionsCache missionsCache, MissionService missionService)
         {
             _soldiersCache = soldiersCache;
@@ -38,28 +41,8 @@ namespace BL.Services
             MissionsCache.ReloadCache();
 
             using var db = new DataLayer.ShabzakDB();
-            soldierMissionsByMissionIdBySoldierId = db.SoldierMission
-                .GroupBy(sm => sm.MissionInstance.MissionId)
-                .ToDictionary(k => k.Key, v => v.GroupBy(s => s.SoldierId)
-                                                .ToDictionary(k => k.Key, v => v.ToList()));
 
-            missionInstanceDic = db.MissionInstances
-                .Include(mi => mi.Soldiers)
-                .ThenInclude(s => s.MissionPosition)
-                .ToList()
-                .GroupBy(mi => mi.Id)
-                .ToDictionary(k => k.Key, v => v.First());
-
-            missionAssignments = db.Missions
-                .Include(m => m.MissionInstances)
-                .Include(m => m.MissionPositions)
-                .ToList()
-                .Select(m => m.Decrypt())
-                .ToList();
-
-            missionCountBySoldier = db.SoldierMission
-                .GroupBy(sm => sm.SoldierId)
-                .ToDictionary(k => k.Key, v => v.Count());
+            ReloadCache();
         }
 
         public List<Translators.Models.Mission> AcceptAutoAssignCandidate(string candidateId)
@@ -79,6 +62,20 @@ namespace BL.Services
                 .ToList();
             db.SoldierMission.AddRange(soldierMissions);
             db.SaveChanges();
+
+            var instances = candidates
+                .Select(c => c.MissionInstanceId)
+                .Distinct()
+                .ToList();
+            foreach (var instanceId in instances)
+            {
+                var instance = db.MissionInstances
+                    .Include(mi => mi.Mission)
+                    .ThenInclude(m => m.MissionPositions)
+                    .First(mi => mi.Id == instanceId);
+                instance.IsInstanceFilled();
+            }
+
             var reload = MissionsCache.ReloadAsync();
             db.SoldierMissionCandidates.RemoveRange(candidates);
             db.SaveChanges();
@@ -86,14 +83,48 @@ namespace BL.Services
             return _missionsCache.GetMissions();
         }
 
+        private void ReloadCache()
+        {
+            using var db = new ShabzakDB();
+
+            soldierMissionsByMissionIdBySoldierId = db.SoldierMission
+                .GroupBy(sm => sm.MissionInstance.MissionId)
+                .ToDictionary(k => k.Key, v => v.GroupBy(s => s.SoldierId)
+                                                .ToDictionary(k => k.Key, v => v.ToList()));
+
+            missionInstanceDic = db.MissionInstances
+                .Include(mi => mi.Soldiers)
+                .ThenInclude(s => s.MissionPosition)
+                .ToList()
+                .GroupBy(mi => mi.Id)
+                .ToDictionary(k => k.Key, v => v.First());
+
+            missionAssignments = db.Missions
+                .Include(m => m.MissionInstances)
+                .Include(m => m.MissionPositions)
+                .ToList()
+                .Select(m => m.Decrypt())
+                .ToList();
+            
+            missionCountBySoldier = db.SoldierMission
+                .GroupBy(sm => sm.SoldierId)
+                .ToDictionary(k => k.Key, v => v.Count());
+        }
+
         public AssignmentValidationModel AutoAssign(DateTime? from, DateTime? to, List<int>? missions = null, List<int>? soldiers = null)
         {
             var watch = new Stopwatch();
             watch.Start();
+
+            ReloadCache();
+
             List<Soldier> selectedSoldiers;
             if (soldiers == null || soldiers.Count == 0)
             {
                 selectedSoldiers = _soldiersCache.GetDBSoldiers();
+                soldiers = selectedSoldiers
+                    .Select(s => s.Id)
+                    .ToList();
             } else
             {
                 selectedSoldiers = _soldiersCache.GetDBSoldiers()
@@ -135,7 +166,7 @@ namespace BL.Services
             foreach (var instance in instances)
             {
                 Logger.LogToMemory($"Assigning to instance: {instance.Id}", LogLevel.Info);
-                if(IsInstanceFilled(instance))
+                if(instance.IsInstanceFilled())
                 {
                     candidatesPerInstance.Add(instance.Id, []);
                     Logger.LogToMemory($"Instance already filled, skipping.", LogLevel.Info);
@@ -178,13 +209,16 @@ namespace BL.Services
                     })
                     .ToList();
                 Logger.LogToMemory($"Candidates for mission: {instance.Mission.Name}, instance: {instance.Id}:\n{JsonConvert.SerializeObject(logCandidates, Formatting.Indented)}", LogLevel.Info, ConsoleColor.Green);
-                if(skippedInstances < 5)
-                {
-                    skippedInstances++;
-                } else
-                {
-                    AssignSoldiersToInstance(candidateSoldiers, instance);
-                }
+                ///TODO: remove me
+                //if (skippedInstances < 5)
+                //{
+                //    skippedInstances++;
+                //}
+                //else
+                //{
+                //    AssignSoldiersToInstance(candidateSoldiers, instance);
+                //}
+                AssignSoldiersToInstance(candidateSoldiers, instance);
             }
             watch.Stop();
             var span = watch.Elapsed;
@@ -207,6 +241,16 @@ namespace BL.Services
                 })
                 .ToList());
             db.SaveChanges();
+
+            var assignmentsJson = JsonConvert.SerializeObject(ret, Formatting.Indented);
+            var jsonDirectory = Path.Combine(Directory.GetCurrentDirectory(), "AssignmentsResults");
+            if(!Directory.Exists(jsonDirectory))
+            {
+                Directory.CreateDirectory(jsonDirectory);
+            }
+            var jsonPath = Path.Combine(jsonDirectory, $"{ret.Id}.json");
+            File.WriteAllText(jsonPath, assignmentsJson);
+
             return ret;
         }
 
@@ -253,7 +297,9 @@ namespace BL.Services
                 var requiredCommanders = mission.CommandersRequired;
                 var total = requiredSoldiers + requiredCommanders;
 
-                foreach (var instance in mission.MissionInstances)
+                var relevantInstances = mission.MissionInstances
+                    .Where(mi => mi.FromTime >= absoluteFrom && mi.ToTime <= to);
+                foreach (var instance in relevantInstances)
                 {
                     ret.TotalInstancesCount++;
                     var assignedCommanders = 0;
@@ -274,7 +320,13 @@ namespace BL.Services
                     {
                         ret.ValidInstancesCount++;
                         var mi = instance.ToBL(false, true);
-                        ret.ValidInstances.Add(new CandidateMissionInstance
+
+                        if (!ret.ValidInstances.ContainsKey(instance.Mission.Name))
+                        {
+                            ret.ValidInstances[instance.Mission.Name] = [];
+                        }
+
+                        ret.ValidInstances[instance.Mission.Name].Add(new CandidateMissionInstance
                         {
                             Id = mi.Id,
                             FromTime = mi.FromTime,
@@ -286,7 +338,7 @@ namespace BL.Services
                                             Soldier = c.Soldier.ToBL(false, false),
                                             MissionsAssignedTo = c.MissionsAssignedTo,
                                             Rank = c.Rank,
-                                            RankBreakdown = c.RankBreakdown
+                                            RankBreakdown = c.RankBreakdown,
                                         })
                                     .ToList()
                         });
@@ -294,21 +346,25 @@ namespace BL.Services
                     else
                     {
                         var mi = instance.ToBL(false, true);
-                        ret.FaultyInstances.Add(new CandidateMissionInstance
+                        if(!ret.FaultyInstances.ContainsKey(instance.Mission.Name))
+                        {
+                            ret.FaultyInstances[instance.Mission.Name] = [];
+                        }
+                        ret.FaultyInstances[instance.Mission.Name].Add(new CandidateMissionInstance
                         {
                             Id = mi.Id,
                             FromTime = mi.FromTime,
                             ToTime = mi.ToTime,
                             SoldierMissions = mi.SoldierMissions,
-                            Candidates = candidates[instance.Id]
-                                    .Select(c => new CandidateSoldierAssignmentVM
-                                        {
-                                            Soldier = c.Soldier.ToBL(false, false),
-                                            MissionsAssignedTo = c.MissionsAssignedTo,
-                                            Rank = c.Rank,
-                                            RankBreakdown = c.RankBreakdown
-                                        })
-                                    .ToList()
+                            Candidates = candidates.ContainsKey(instance.Id) ? candidates[instance.Id]
+                                .Select(c => new CandidateSoldierAssignmentVM
+                                    {
+                                        Soldier = c.Soldier.ToBL(false, false),
+                                        MissionsAssignedTo = c.MissionsAssignedTo,
+                                        Rank = c.Rank,
+                                        RankBreakdown = c.RankBreakdown
+                                    })
+                                .ToList() : []
                         });
                     }
                 }
@@ -317,13 +373,36 @@ namespace BL.Services
             return ret;
         }
 
-        public bool IsInstanceFilled(MissionInstance instance)
+        //public bool IsInstanceFilled(MissionInstance instance)
+        //{
+        //    var totalPositions = instance.Mission.MissionPositions.Sum(mp => mp.Count);
+        //    using var db = new DataLayer.ShabzakDB();
+        //    var totalAssignments = db.SoldierMission
+        //        .Count(sm => sm.MissionInstanceId == instance.Id);
+        //    instance.IsFilled = totalPositions == totalAssignments;
+        //    return instance.IsFilled;
+        //}
+
+        public List<string> GetAllCandidates()
         {
-            var totalPositions = instance.Mission.MissionPositions.Sum(mp => mp.Count);
-            using var db = new DataLayer.ShabzakDB();
-            var totalAssignments = db.SoldierMission
-                .Count(sm => sm.MissionInstanceId == instance.Id);
-            return totalPositions == totalAssignments;
+            using var db = new ShabzakDB();
+            var candidates = db.SoldierMissionCandidates
+                .Select(sm => sm.CandidateId)
+                .Distinct()
+                .ToList();
+            return candidates ?? [];
+        }
+
+        public AssignmentValidationModel GetCandidate(string guid)
+        {
+            var path = Path.Combine(Directory.GetCurrentDirectory(), "AssignmentsResults", $"{guid}.json");
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException("Candidate not found.");
+            }
+            var json = File.ReadAllText(path);
+            var ret = JsonConvert.DeserializeObject<AssignmentValidationModel>(json);
+            return ret;
         }
 
         private void AssignSoldiersToInstance(List<CandidateSoldierAssignment> soldiers, MissionInstance missionInstance)
@@ -441,7 +520,17 @@ namespace BL.Services
                     }
                 }
             }
+
+            if(assignments.Count > 1)
+            {
+                var randNum = rand.Next(0, 101);
+                if (randNum <= 20)
+                {
+                    assignments = assignments.Take(assignments.Count - 1).ToList();
+                }
+            }
             missionInstance.Soldiers = assignments;
+            missionInstance.IsInstanceFilled();
         }
 
         private List<MissionInstance> GetMissionInstances(DateTime from, DateTime to, List<Mission> missions)

@@ -15,12 +15,14 @@ namespace BL.Extensions
         private static readonly string naEncrypted;
         private static readonly AESEncryptor encryptor;
         private static readonly SoldiersCache soldierCache;
+        private static readonly MissionsCache missionCache;
 
         static UserExtension()
         {
             encryptor = new AESEncryptor();
             naEncrypted = encryptor.Encrypt("N/A");
             soldierCache = SoldiersCache.GetInstance();
+            missionCache = MissionsCache.GetInstance();
         }
 
         public static User Encrypt(this User user)
@@ -60,6 +62,11 @@ namespace BL.Extensions
             if (user.SoldierId.HasValue && soldierCache.Exist(user.SoldierId.Value))
             {
                 user.Soldier = soldierCache.GetSoldierById(user.SoldierId.Value);
+                var cachedMissions = user.Soldier.Missions
+                    .Where(m => missionCache.ContainsKey(m.Id))
+                    .Select(m => missionCache.GetMissionById(m.Id))
+                    .ToList();
+                //user.Soldier.Missions = cachedMissions;
             }
             return user;
         }

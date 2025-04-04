@@ -1,6 +1,9 @@
-using BL.Cache;
+﻿using BL.Cache;
+using BL.Extensions;
 using BL.Services;
 using DataLayer;
+using Microsoft.EntityFrameworkCore;
+using Translators.Encryption;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,7 +18,6 @@ db.Dispose();
 //remotedb.Database.EnsureCreated();
 //remotedb.SaveChanges();
 //remotedb.Dispose();
-
 
 var usersCache = UsersCache.GetInstance();
 builder.Services.AddSingleton(usersCache);

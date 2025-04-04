@@ -14,8 +14,8 @@ namespace BL.Models
         public DateTime To { get; set; }
         public int ValidInstancesCount { get; set; }
         public int TotalInstancesCount { get; set; }
-        public List<CandidateMissionInstance> FaultyInstances { get; set; }
-        public List<CandidateMissionInstance> ValidInstances { get; set; }
+        public Dictionary<string, List<CandidateMissionInstance>> FaultyInstances { get; set; }
+        public Dictionary<string, List<CandidateMissionInstance>> ValidInstances { get; set; }
 
     }
 }

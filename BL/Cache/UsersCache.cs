@@ -46,6 +46,16 @@ namespace BL.Cache
         {
             using var db = new DataLayer.ShabzakDB();
 
+            //var users = db.Users
+            //    .Where(u => u.Id != 39)
+            //    .ToList()
+            //    //.Select(u => u.Decrypt())
+            //    //.Where(u => u.Name.Equals(encUsername))
+            //    .Select(u => u.Encrypt())
+            //    .ToList();
+
+            //db.SaveChanges();
+
             usersDic = db.Users
                 .ToList()
                 .Select(s => s.Decrypt())

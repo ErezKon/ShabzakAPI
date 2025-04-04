@@ -11,6 +11,7 @@ namespace Translators.Models
         public int Id { get; set; }
         public string FromTime { get; set; }
         public string ToTime { get; set; }
+        public bool IsFilled { get; set; } = false;
 
         public List<SoldierMission> SoldierMissions { get; set; }
     }

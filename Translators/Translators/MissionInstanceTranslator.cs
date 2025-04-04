@@ -9,7 +9,7 @@ namespace Translators.Translators
 {
     public abstract class MissionInstanceTranslator
     {
-        public static MissionInstance ToBL(DataLayer.Models.MissionInstance missionInstance, bool includeMission = true, bool includeSoldier = true)
+        public static MissionInstance ToBL(DataLayer.Models.MissionInstance missionInstance, bool includeMissionInstance = true, bool includeSoldier = true)
         {
             if(missionInstance == null)
             {
@@ -18,7 +18,7 @@ namespace Translators.Translators
             var soldierMissions = new List<SoldierMission>();
             foreach(var s in missionInstance.Soldiers ?? []) 
             {
-                var sm = SoldierMissionTranslator.ToBL(s, includeSoldier, includeMission);
+                var sm = SoldierMissionTranslator.ToBL(s, includeSoldier, includeMissionInstance);
                 soldierMissions.Add(sm);
             }
             return new MissionInstance
@@ -26,6 +26,7 @@ namespace Translators.Translators
                 Id = missionInstance.Id,
                 FromTime = missionInstance.FromTime.ToString("dd/MM/yyyy HH:mm"),
                 ToTime = missionInstance.ToTime.ToString("dd/MM/yyyy HH:mm"),
+                IsFilled = missionInstance.IsFilled,
                 SoldierMissions = soldierMissions
             };
         }
@@ -40,6 +41,7 @@ namespace Translators.Translators
                 Id = missionInstance.Id,
                 FromTime = Convert.ToDateTime(missionInstance.FromTime),
                 ToTime = Convert.ToDateTime(missionInstance.ToTime),
+                IsFilled = missionInstance.IsFilled,
                 Soldiers = missionInstance.SoldierMissions
                     ?.Select(s => SoldierMissionTranslator.ToDB(s))
                     ?.ToList() ?? []
