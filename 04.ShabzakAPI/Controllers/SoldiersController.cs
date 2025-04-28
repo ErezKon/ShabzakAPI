@@ -7,6 +7,7 @@ using BL.Cache;
 using BL.Services;
 using BL.Extensions;
 using Newtonsoft.Json;
+using ShabzakAPI.ViewModels;
 
 namespace _04.ShabzakAPI.Controllers
 {
@@ -140,6 +141,27 @@ namespace _04.ShabzakAPI.Controllers
         {
             _soldierService.DeleteSoldier(soldierId);
             return soldierId;
+        }
+
+        [HttpPost("RequestVacation")]
+        public Vacation RequestVacation(RequestVacationModel request)
+        {
+            var ret = _soldierService.RequestVacation(request.SoldierId, request.From, request.To);
+            return ret;
+        }
+
+        [HttpPost("RespondToVacationRequest")]
+        public Vacation RespondToVacationRequest(RespondToVacationRequestModel response)
+        {
+            var ret = _soldierService.RespondToVacationRequest(response.VacationId, response.Response);
+            return ret;
+        }
+
+        [HttpPost("GetVacations")]
+        public List<Vacation> GetVacations(GetVacationsFilterModel filter)
+        {
+            var ret = _soldierService.GetVacations(filter.SoldierId, filter.Status);
+            return ret;
         }
     }
 }

@@ -164,6 +164,9 @@ namespace DataLayer
                     .IsRequired();
                 entity.Property(e => e.To)
                     .IsRequired();
+                entity.Property(e => e.Approved)
+                    .IsRequired()
+                    .HasDefaultValue(VacationRequestStatus.Pending);
 
                 entity.HasOne(e => e.Soldier)
                     .WithMany(e => e.Vacations)

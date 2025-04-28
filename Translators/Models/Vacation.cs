@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using DataLayer.Models;
 
 namespace Translators.Models
 {
@@ -12,5 +7,6 @@ namespace Translators.Models
         public int Id { get; set; }
         public DateTime From { get; set; }
         public DateTime To { get; set; }
+        public VacationRequestStatus Approved { get; set; } = VacationRequestStatus.Pending;
     }
 }

@@ -22,6 +22,9 @@ namespace DataLayer.Models
         [Required]
         public DateTime To { get; set; }
 
+        [Required]
+        public VacationRequestStatus Approved { get; set; } = VacationRequestStatus.Pending;
+
         public virtual Soldier Soldier { get; set; } = new Soldier();
     }
 }

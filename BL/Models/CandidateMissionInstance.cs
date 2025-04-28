@@ -10,5 +10,6 @@ namespace BL.Models
     public class CandidateMissionInstance: MissionInstance
     {
         public List<CandidateSoldierAssignmentVM> Candidates { get; set; }
+        public Dictionary<Position, int>? MissingPositions { get; set; }
     }
 }

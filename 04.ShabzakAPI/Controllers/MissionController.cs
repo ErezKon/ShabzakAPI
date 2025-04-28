@@ -172,5 +172,13 @@ namespace ShabzakAPI.Controllers
             var ret = _autoAssignService.GetCandidate(guid);
             return ret;
         }
+
+        [HttpPost("RemoveSoldierFromMissionInstance")]
+        public List<Mission> RemoveSoldierFromMissionInstance(int soldierId, int missionInstanceId)
+        {
+            _autoAssignService.RemoveSoldierFromMissionInstance(soldierId, missionInstanceId);
+            return GetMissions();
+
+        }
     }
 }
