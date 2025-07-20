@@ -8,6 +8,8 @@ using BL.Services;
 using BL.Extensions;
 using Newtonsoft.Json;
 using ShabzakAPI.ViewModels;
+using BL.Models;
+using static System.Net.WebRequestMethods;
 
 namespace _04.ShabzakAPI.Controllers
 {
@@ -161,6 +163,13 @@ namespace _04.ShabzakAPI.Controllers
         public List<Vacation> GetVacations(GetVacationsFilterModel filter)
         {
             var ret = _soldierService.GetVacations(filter.SoldierId, filter.Status);
+            return ret;
+        }
+
+        [HttpPost("GetSummary")]
+        public SoldierSummary GetSummary(int soldierId)
+        {
+            var ret = _soldierService.GetSummary(soldierId);
             return ret;
         }
     }

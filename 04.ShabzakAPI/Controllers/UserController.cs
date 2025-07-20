@@ -24,16 +24,10 @@ namespace ShabzakAPI.Controllers
         }
 
         [HttpPost("ResetPassword")]
-        public string ResetPassword(string username, string password)
+        public string ResetPassword(ResetPasswordVM model)
         {
             using var db = new ShabzakDB();
-            var encUsername = Sha512Encryptor.Encrypt(username);
-            //var users = db.Users
-            //    .ToList()
-            //    .Select(u => u.Decrypt())
-            //    .Where(u => u.Name.Equals(encUsername))
-            //    .ToList();
-
+            var encUsername = model.Encrypted ? model.Username : Sha512Encryptor.Encrypt(model.Username);
             var cache = UsersCache.GetInstance();
             var user = cache.GetUser(encUsername);
 
@@ -41,17 +35,7 @@ namespace ShabzakAPI.Controllers
             {
                 return "User not found.";
             }
-            //if (users.Count == 0)
-            //{
-            //    return "User not found.";
-            //}
-            //if (users.Count > 1)
-            //{
-            //    return "Username matches too many users";
-            //}
-
-            //var user = users.First();
-            var encPass = Sha512Encryptor.Encrypt(password);
+            var encPass = model.Encrypted ? model.Password : Sha512Encryptor.Encrypt(model.Password);
             var pass = Sha512Encryptor.Encrypt($"{encPass}{user.Salt}");
             user.Password = pass;
             db.SaveChanges();

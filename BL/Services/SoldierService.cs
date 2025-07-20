@@ -1,8 +1,11 @@
 ﻿using BL.Cache;
 using BL.Extensions;
 using BL.Logging;
+using BL.Models;
 using DataLayer;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using Translators.Encryption;
 using Translators.Models;
 using Translators.Translators;
 
@@ -195,6 +198,42 @@ namespace BL.Services
                 .ToList()
                 .Select(vac => VacationTranslator.ToBL(vac))
                 .ToList();
+            return ret;
+        }
+
+        public SoldierSummary GetSummary(int soldierId)
+        {
+            using var db = new ShabzakDB();
+            var data = db.SoldierMission
+                .Include(sm => sm.MissionInstance)
+                .ThenInclude(mi => mi.Mission)
+                .Where(sm => sm.SoldierId == soldierId)
+                .ToList();
+            var ret = new SoldierSummary
+            {
+                TotalMissions = data.Count,
+                TotalHours = data.Sum(d => (d.MissionInstance.ToTime - d.MissionInstance.FromTime).TotalHours),
+                MissionBreakdown = []
+            };
+            var countDic = new Dictionary<string, int>();
+            foreach(var soldierMission in data)
+            {
+                var breakdown = new SoldierMissionBreakdown();
+                if(!countDic.ContainsKey(soldierMission.MissionInstance.Mission.Name))
+                {
+                    countDic.Add(soldierMission.MissionInstance.Mission.Name, 0);
+                }
+                countDic[soldierMission.MissionInstance.Mission.Name]++;
+            }
+            var encryptor = new AESEncryptor();
+            foreach (var missionCount in countDic)
+            {
+                ret.MissionBreakdown.Add(new SoldierMissionBreakdown
+                {
+                    MissionName = encryptor.Decrypt(missionCount.Key),
+                    Count = missionCount.Value
+                });
+            }
             return ret;
         }
     }
