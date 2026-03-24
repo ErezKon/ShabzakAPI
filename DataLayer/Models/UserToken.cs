@@ -8,23 +8,25 @@ using System.Threading.Tasks;
 
 namespace DataLayer.Models
 {
-    public class Vacation
+    public class UserToken
     {
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
         [Required]
-        public int SoldierId { get; set; }
+        public string Token { get; set; }
 
         [Required]
-        public DateTime From { get; set; }
+        public DateTime Expiration { get; set; }
 
         [Required]
-        public DateTime To { get; set; }
+        public int UserId { get; set; }
 
         [Required]
-        public VacationRequestStatus Approved { get; set; } = VacationRequestStatus.Pending;
+        public string Extra { get; set; }
 
-        public virtual Soldier Soldier { get; set; } = new Soldier();
+
+        public virtual User User { get; set; }
+
     }
 }

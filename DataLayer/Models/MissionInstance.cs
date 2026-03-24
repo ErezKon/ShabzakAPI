@@ -21,6 +21,9 @@ namespace DataLayer.Models
         [Required]
         public DateTime ToTime { get; set; }
 
+        [Required]
+        public bool IsFilled { get; set; } = false;
+
         public virtual List<SoldierMission> Soldiers { get; set; }
         public virtual Mission Mission { get; set; }
 

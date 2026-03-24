@@ -2,6 +2,7 @@
 using BL.Extensions;
 using BL.Logging;
 using BL.Models;
+using DataLayer;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using System.Transactions;
@@ -95,7 +96,11 @@ namespace BL.Services
             try
             {
                 using var db = new DataLayer.ShabzakDB();
-                var dbModel = GetDBMissionById(db, mission.Id);
+                var dbModel = (db.Missions
+                    .Include(m => m.MissionInstances)
+                    .Include(m => m.MissionPositions)
+                    .FirstOrDefault(m => m.Id == mission.Id)
+                    ?.Decrypt()) ?? throw new ArgumentNullException("Mission not found");
                 dbModel.Name = mission.Name;
                 dbModel.Description = mission.Description;
                 dbModel.Duration = mission.Duration;
@@ -104,18 +109,20 @@ namespace BL.Services
                 dbModel.FromTime = mission.FromTime;
                 dbModel.ToTime = mission.ToTime;
                 dbModel.IsSpecial = mission.IsSpecial;
-                foreach (var mi in mission.MissionInstances)
-                {
-                    var miDbModel = db.MissionInstances
-                        .FirstOrDefault(m => m.Id == mi.Id);
-                    if (miDbModel != null)
+                db.MissionInstances.RemoveRange(dbModel.MissionInstances);
+
+                dbModel.MissionInstances = mission.MissionInstances
+                    .Select(mi => new DataLayer.Models.MissionInstance
                     {
-                        miDbModel.FromTime = mi.FromTime;
-                        miDbModel.ToTime = mi.ToTime;
-                    }
-                }
+                        FromTime = mi.FromTime,
+                        ToTime = mi.ToTime,
+                        MissionId = mi.MissionId,
+                        IsFilled = mi.IsFilled,
+                    })
+                    .ToList();
                 dbModel.Encrypt();
                 db.SaveChanges();
+
                 MissionsCache.ReloadAsync();
                 return GetDBMissionById(db, mission.Id)
                     .Decrypt()
@@ -158,6 +165,7 @@ namespace BL.Services
 
             instance.Soldiers ??= new();
             instance.Soldiers.AddRange(soldiers);
+            instance.IsInstanceFilled();
 
             db.SaveChanges();
             MissionsCache.ReloadAsync();
@@ -311,6 +319,29 @@ namespace BL.Services
             }
 
             db.SaveChanges();
+        }
+
+        public List<MissionInstance> GetMissionInstancesInRange(DateTime from, DateTime to, bool fullDay = true, bool unassignedOnly = true)
+        {
+            using var db = new DataLayer.ShabzakDB();
+            if(fullDay)
+            {
+                from = from.Date;
+                to = to.Date.AddDays(1).AddTicks(-1);
+            }
+            var query = db.MissionInstances
+                .Where(mi => mi.FromTime >= from && mi.ToTime <= to);
+            if(unassignedOnly)
+            {
+                query = query
+                    .Where(mi => mi.Soldiers.Count == 0);
+            }
+            var instances = query
+                .ToList()
+                .Select(mi => mi.ToBL())
+                .ToList();
+
+            return instances;
         }
 
         private bool OverlappingTimes(DateTime startTime1, DateTime endTime1, DateTime startTime2, DateTime endTime2)

@@ -68,6 +68,8 @@ namespace DataLayer
                     .IsRequired();
                 entity.Property(e => e.Duration)
                     .IsRequired();
+                entity.Property(e => e.SimulateDuration)
+                    .HasDefaultValue(null);
                 entity.Property(e => e.IsSpecial)
                     .IsRequired();
 
@@ -88,6 +90,14 @@ namespace DataLayer
 
                 entity.Property(e => e.MissionId)
                     .IsRequired();
+                entity.Property(e => e.FromTime)
+                    .IsRequired();
+                entity.Property(e => e.ToTime)
+                    .IsRequired();
+                entity.Property(mi => mi.IsFilled)
+                    .IsRequired()
+                    .HasDefaultValue(false);
+
                 entity.Property(e => e.FromTime);
                 entity.Property(e => e.ToTime);
 
@@ -154,6 +164,9 @@ namespace DataLayer
                     .IsRequired();
                 entity.Property(e => e.To)
                     .IsRequired();
+                entity.Property(e => e.Approved)
+                    .IsRequired()
+                    .HasDefaultValue(VacationRequestStatus.Pending);
 
                 entity.HasOne(e => e.Soldier)
                     .WithMany(e => e.Vacations)
@@ -173,6 +186,59 @@ namespace DataLayer
                 entity.Property(e => e.CandidateId)
                     .IsRequired();
             });
+
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Name)
+                    .IsRequired();
+                entity.Property(e => e.Password)
+                    .IsRequired();
+                entity.Property(e => e.Salt)
+                    .IsRequired();
+                entity.Property(e => e.Role)
+                    .IsRequired();
+                entity.Property(e => e.Activated)
+                    .HasDefaultValue(true)
+                    .IsRequired();
+                entity.Property(e => e.Enabled)
+                    .HasDefaultValue(false)
+                    .IsRequired();
+            });
+
+            modelBuilder.Entity<AutoAssignmentsMeta>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Guid)
+                    .IsRequired();
+                entity.Property(e => e.From)
+                    .IsRequired();
+                entity.Property(e => e.To)
+                    .IsRequired();
+                entity.Property(e => e.Soldiers)
+                    .IsRequired();
+                entity.Property(e => e.Missions)
+                    .IsRequired();
+            });
+
+            //modelBuilder.Entity<UserToken>(entity =>
+            //{
+            //    entity.HasKey(e => e.Id);
+
+            //    entity.Property(e => e.Token)
+            //        .IsRequired();
+            //    entity.Property(e => e.Expiration)
+            //        .IsRequired();
+            //    entity.Property(e => e.UserId)
+            //        .IsRequired();
+
+
+            //    entity.HasOne(e => e.User)
+            //        .WithMany(e => e.UserTokens)
+            //        .HasForeignKey(e => e.UserId);
+            //});
         }
 
         public DbSet<Soldier> Soldiers { get; set; }
@@ -182,5 +248,7 @@ namespace DataLayer
         public DbSet<SoldierMission> SoldierMission { get; set; }
         public DbSet<SoldierMissionCandidate> SoldierMissionCandidates { get; set; }
         public DbSet<Vacation> Vacations { get; set; }
+        public DbSet<User> Users { get; set; }
+        //public DbSet<UserToken> UserTokens { get; set; }
     }
 }

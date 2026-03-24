@@ -10,7 +10,7 @@ namespace Translators.Models
     {
         public int Id { get; set; }
         public Soldier Soldier { get; set; }
-        public MissionInstance MissionInstance { get; set; }
-        public MissionPosition MissionPosition { get; set; }
+        public MissionInstance? MissionInstance { get; set; }
+        public MissionPosition? MissionPosition { get; set; }
     }
 }

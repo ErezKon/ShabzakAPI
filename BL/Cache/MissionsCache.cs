@@ -25,6 +25,13 @@ namespace BL.Cache
                 ReloadCache();
             }, null, TimeSpan.Zero, TimeSpan.FromMinutes(5));
         }
+        public static Task ReloadAsync()
+        {
+            return Task.Factory.StartNew(() =>
+            {
+                ReloadCache();
+            });
+        }
 
         public static void ReloadCache()
         {
@@ -66,6 +73,14 @@ namespace BL.Cache
         public List<Mission> GetMissions() => Missions.ToList();
         public List<DataLayer.Models.Mission> GetDBMissions() => DbMissions.ToList();
 
+        public bool ContainsKey(int missionId)
+        {
+            lock(missionDic)
+            {
+                return missionDic.ContainsKey(missionId);
+            }
+        }
+
         public Mission GetMissionById(int id, bool includeInstances = true)
         {
             lock (missionDic)
@@ -96,14 +111,6 @@ namespace BL.Cache
             Missions = Missions
                 .Union([Mission])
                 .ToList();
-        }
-
-        public static Task ReloadAsync()
-        {
-            return Task.Factory.StartNew(() =>
-            {
-                ReloadCache();
-            });
         }
     }
 

@@ -1,14 +1,15 @@
 ﻿using BL.Cache;
 using BL.Extensions;
 using BL.Logging;
+using BL.Models;
+using DataLayer;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+using Translators.Encryption;
 using Translators.Models;
+using Translators.Translators;
+
+using VacationRequestStatus = DataLayer.Models.VacationRequestStatus;
 
 namespace BL.Services
 {
@@ -146,6 +147,94 @@ namespace BL.Services
             using var db = new DataLayer.ShabzakDB();
             db.Soldiers.AddRange(data);
             db.SaveChanges();
+        }
+
+        public Vacation RequestVacation(int soldierId, DateTime from, DateTime to)
+        {
+            if (from >= to)
+            {
+                throw new ArgumentException("End date cannot be greater or equal to start date.");
+            }
+            var vacation = new DataLayer.Models.Vacation
+            {
+                SoldierId = soldierId,
+                From = from,
+                To = to,
+                Approved = VacationRequestStatus.Pending
+            };
+            using var db = new ShabzakDB();
+            db.Vacations.Add(vacation);
+            db.SaveChanges();
+            return VacationTranslator.ToBL(vacation);
+        }
+
+        public Vacation RespondToVacationRequest(int vacationId, VacationRequestStatus response)
+        {
+            using var db = new ShabzakDB();
+            var vacation = db.Vacations.FirstOrDefault(vac => vac.Id == vacationId)
+                ?? throw new ArgumentNullException($"Vacation ID {vacationId} not found.");
+            vacation.Approved = response;
+            db.SaveChanges();
+            return VacationTranslator.ToBL(vacation);
+        }
+
+        public List<Vacation> GetVacations(int? soldierId, VacationRequestStatus? status)
+        {
+            using var db = new ShabzakDB();
+            var vacations = db.Vacations
+                .AsQueryable();
+
+            if(soldierId.HasValue)
+            {
+                vacations = vacations
+                    .Where(vac => vac.SoldierId == soldierId);
+            }
+            if (status.HasValue)
+            {
+                vacations = vacations
+                    .Where(vac => vac.Approved == status);
+            }
+            var ret = vacations
+                .ToList()
+                .Select(vac => VacationTranslator.ToBL(vac))
+                .ToList();
+            return ret;
+        }
+
+        public SoldierSummary GetSummary(int soldierId)
+        {
+            using var db = new ShabzakDB();
+            var data = db.SoldierMission
+                .Include(sm => sm.MissionInstance)
+                .ThenInclude(mi => mi.Mission)
+                .Where(sm => sm.SoldierId == soldierId)
+                .ToList();
+            var ret = new SoldierSummary
+            {
+                TotalMissions = data.Count,
+                TotalHours = data.Sum(d => (d.MissionInstance.ToTime - d.MissionInstance.FromTime).TotalHours),
+                MissionBreakdown = []
+            };
+            var countDic = new Dictionary<string, int>();
+            foreach(var soldierMission in data)
+            {
+                var breakdown = new SoldierMissionBreakdown();
+                if(!countDic.ContainsKey(soldierMission.MissionInstance.Mission.Name))
+                {
+                    countDic.Add(soldierMission.MissionInstance.Mission.Name, 0);
+                }
+                countDic[soldierMission.MissionInstance.Mission.Name]++;
+            }
+            var encryptor = new AESEncryptor();
+            foreach (var missionCount in countDic)
+            {
+                ret.MissionBreakdown.Add(new SoldierMissionBreakdown
+                {
+                    MissionName = encryptor.Decrypt(missionCount.Key),
+                    Count = missionCount.Value
+                });
+            }
+            return ret;
         }
     }
 }

@@ -26,6 +26,7 @@ namespace DataLayer.Models
 
         [Required]
         public int Duration { get; set; }
+        public int? SimulateDuration { get; set; }
 
         public string? FromTime { get; set; }
 

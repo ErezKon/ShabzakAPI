@@ -15,6 +15,7 @@ namespace Translators.Models
         public int SoldiersRequired { get; set; }
         public int CommandersRequired { get; set; }
         public int Duration { get; set; }
+        public int? SimulateDuration { get; set; }
         public string? FromTime { get; set; }
         public string? ToTime { get; set; }
         public bool IsSpecial { get; set; }

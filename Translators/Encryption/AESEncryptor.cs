@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 
-namespace BL
+namespace Translators.Encryption
 {
     public class AESEncryptor
     {
@@ -59,10 +59,10 @@ namespace BL
         {
             // Check arguments. 
             if (string.IsNullOrWhiteSpace(cipherText))
-            { 
+            {
                 throw new ArgumentNullException("cipherText cannot be null");
             }
-            lock(decryptionDic)
+            lock (decryptionDic)
             {
                 if (decryptionDic.ContainsKey(cipherText))
                 {

@@ -1,20 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace DataLayer.Models
 {
-    public class Vacation
+    public class AutoAssignmentsMeta
     {
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
         [Required]
-        public int SoldierId { get; set; }
+        public string Guid { get; set; }
 
         [Required]
         public DateTime From { get; set; }
@@ -23,8 +23,10 @@ namespace DataLayer.Models
         public DateTime To { get; set; }
 
         [Required]
-        public VacationRequestStatus Approved { get; set; } = VacationRequestStatus.Pending;
+        public string Soldiers { get; set; }
 
-        public virtual Soldier Soldier { get; set; } = new Soldier();
+        [Required]
+        public string Missions { get; set; }
+
     }
 }

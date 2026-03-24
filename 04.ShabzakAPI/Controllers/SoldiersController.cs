@@ -7,6 +7,9 @@ using BL.Cache;
 using BL.Services;
 using BL.Extensions;
 using Newtonsoft.Json;
+using ShabzakAPI.ViewModels;
+using BL.Models;
+using static System.Net.WebRequestMethods;
 
 namespace _04.ShabzakAPI.Controllers
 {
@@ -74,17 +77,36 @@ namespace _04.ShabzakAPI.Controllers
             //return null;
 
             using var db = new DataLayer.ShabzakDB();
-            using var remote = new DataLayer.RemoteDB();
-            var soldiers = db.Soldiers
-                .ToList();
+           // using var remote = new DataLayer.RemoteDB();
 
-            foreach (var soldier in soldiers)
+            var missionsJson = System.IO.File.ReadAllText(@"C:\Users\Erez_Konforti\OneDrive - Dell Technologies\Documents\Shabzak data\missions-detailed.json");
+            var missions = JsonConvert.DeserializeObject<List<DataLayer.Models.Mission>>(missionsJson);
+            foreach (var mission in missions)
             {
-                soldier.Id = 0;
+                mission.Id = 0;
+
+                foreach (var instance in mission.MissionInstances)
+                {
+                    instance.MissionId = mission.Id;
+                    instance.Mission = mission;
+                }
+                foreach (var pos in mission.MissionPositions)
+                {
+                    pos.MissionId = mission.Id;
+                    pos.Mission = mission;
+                }
             }
 
-            remote.Soldiers.AddRange(soldiers);
-            remote.SaveChanges();
+            //var soldiers = db.Soldiers
+            //    .ToList();
+
+            //foreach (var soldier in soldiers)
+            //{
+            //    soldier.Id = 0;
+            //}
+
+            db.Missions.AddRange(missions);
+            db.SaveChanges();
 
             return null;
         }
@@ -122,6 +144,34 @@ namespace _04.ShabzakAPI.Controllers
         {
             _soldierService.DeleteSoldier(soldierId);
             return soldierId;
+        }
+
+        [HttpPost("RequestVacation")]
+        public Vacation RequestVacation(RequestVacationModel request)
+        {
+            var ret = _soldierService.RequestVacation(request.SoldierId, request.From, request.To);
+            return ret;
+        }
+
+        [HttpPost("RespondToVacationRequest")]
+        public Vacation RespondToVacationRequest(RespondToVacationRequestModel response)
+        {
+            var ret = _soldierService.RespondToVacationRequest(response.VacationId, response.Response);
+            return ret;
+        }
+
+        [HttpPost("GetVacations")]
+        public List<Vacation> GetVacations(GetVacationsFilterModel filter)
+        {
+            var ret = _soldierService.GetVacations(filter.SoldierId, filter.Status);
+            return ret;
+        }
+
+        [HttpPost("GetSummary")]
+        public SoldierSummary GetSummary(int soldierId)
+        {
+            var ret = _soldierService.GetSummary(soldierId);
+            return ret;
         }
     }
 }

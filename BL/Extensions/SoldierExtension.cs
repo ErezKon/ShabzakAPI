@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Translators.Encryption;
 using Translators.Models;
 using Translators.Translators;
 
@@ -92,7 +93,7 @@ namespace BL.Extensions
             return soldier;
         }
 
-        public static Soldier ToBL(this DataLayer.Models.Soldier soldier) => SoldierTranslator.ToBL(soldier);
+        public static Soldier ToBL(this DataLayer.Models.Soldier soldier, bool includeMissions = true, bool includeVacations = true) => SoldierTranslator.ToBL(soldier, includeMissions, includeVacations);
         public static DataLayer.Models.Soldier ToDB(this Soldier soldier) => SoldierTranslator.ToDB(soldier);
 
         public static bool IsCommander(this Soldier soldier)

@@ -15,7 +15,8 @@ namespace Translators.Translators
             {
                 Id = vac.Id,
                 From = vac.From,
-                To = vac.To
+                To = vac.To,
+                Approved = vac.Approved,
             };
         }
 
@@ -26,7 +27,8 @@ namespace Translators.Translators
             {
                 Id = vac.Id,
                 From = vac.From,
-                To = vac.To
+                To = vac.To,
+                Approved = vac.Approved
             };
         }
     }

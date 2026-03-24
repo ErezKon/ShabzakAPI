@@ -138,11 +138,47 @@ namespace ShabzakAPI.Controllers
             _missionService.AssignSoldiersToMissionInstance(soldiers);
         }
 
-        [HttpGet("AutoAssign")]
-        public AssignmentValidationModel AutoAssign()
+        [HttpPost("AutoAssign")]
+        public List<AssignmentValidationModel> AutoAssign(AutoAssignModel model)
         {
-            var ret = _autoAssignService.AutoAssign(DateTime.Now.AddDays(-7), DateTime.Now.AddDays(7));
+            var ret = _autoAssignService.AutoAssign(model.StartDate, model.EndDate, model.Missions, model.Soldiers);
+            return [ret];
+        }
+
+        [HttpPost("AcceptAssignCandidate")]
+        public List<Mission> AcceptAssignCandidate(string candidateId)
+        {
+            var ret = _autoAssignService.AcceptAutoAssignCandidate(candidateId);
             return ret;
+        }
+
+        [HttpPost("GetMissionInstancesInRange")]
+        public List<MissionInstance> GetMissionInstancesInRange(GetMissionInstancesRangesVM model)
+        {
+            var ret = _missionService.GetMissionInstancesInRange(model.From, model.To, model.FullDay, model.UnassignedOnly);
+            return ret;
+        }
+
+        [HttpGet("GetAllCandidates")]
+        public List<string> GetAllCandidates()
+        {
+            var ret = _autoAssignService.GetAllCandidates();
+            return ret;
+        }
+
+        [HttpPost("GetCandidate")]
+        public AssignmentValidationModel GetCandidate(string guid)
+        {
+            var ret = _autoAssignService.GetCandidate(guid);
+            return ret;
+        }
+
+        [HttpPost("RemoveSoldierFromMissionInstance")]
+        public List<Mission> RemoveSoldierFromMissionInstance(int soldierId, int missionInstanceId)
+        {
+            _autoAssignService.RemoveSoldierFromMissionInstance(soldierId, missionInstanceId);
+            return GetMissions();
+
         }
     }
 }

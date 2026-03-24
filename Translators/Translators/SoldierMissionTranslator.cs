@@ -21,7 +21,7 @@ namespace Translators.Translators
             };
         }
 
-        public static SoldierMission ToBL(DataLayer.Models.SoldierMission sol, bool includeSoldier = true, bool includeMission = false)
+        public static SoldierMission ToBL(DataLayer.Models.SoldierMission sol, bool includeSoldier = true, bool includeMissionInstance = true)
         {
             Soldier soldier = null;
             if (includeSoldier && sol.Soldier != null)
@@ -41,7 +41,7 @@ namespace Translators.Translators
             {
                 Id = sol.Id,
                 Soldier = soldier,
-                MissionInstance = includeMission ? MissionInstanceTranslator.ToBL(sol.MissionInstance, includeMission) : null,
+                MissionInstance = includeMissionInstance ? MissionInstanceTranslator.ToBL(sol.MissionInstance, false, false) : null,
                 MissionPosition = MissionPositionTranslator.ToBL(sol.MissionPosition)
             };
         }

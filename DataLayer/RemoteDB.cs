@@ -64,12 +64,15 @@ namespace DataLayer
                     .IsRequired();
                 entity.Property(e => e.Duration)
                     .IsRequired();
+                entity.Property(e => e.SimulateDuration)
+                    .HasDefaultValue(null);
                 entity.Property(e => e.IsSpecial)
                     .IsRequired();
 
                 entity.HasMany(e => e.MissionPositions)
                     .WithOne(e => e.Mission)
-                    .HasForeignKey(e => e.MissionId);
+                    .HasForeignKey(e => e.MissionId)
+                    .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasMany(e => e.MissionInstances)
                     .WithOne(e => e.Mission)
@@ -89,7 +92,7 @@ namespace DataLayer
                 entity.HasOne(e => e.Mission)
                     .WithMany(e => e.MissionInstances)
                     .HasForeignKey(e => e.MissionId)
-                    .OnDelete(DeleteBehavior.NoAction);
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<SoldierMission>(entity =>
@@ -103,21 +106,20 @@ namespace DataLayer
                 entity.Property(e => e.MissionPositionId)
                     .IsRequired();
 
-                entity.HasOne(e => e.MissionInstance)
-                    .WithMany(e => e.Soldiers)
-                    .HasForeignKey(e => e.SoldierId)
-                    .HasForeignKey(e => e.MissionInstanceId)
-                    .OnDelete(DeleteBehavior.NoAction);
-
                 entity.HasOne(e => e.Soldier)
-                    .WithMany(e => e.Missions)
-                    .HasForeignKey(e => e.MissionInstanceId)
-                    .OnDelete(DeleteBehavior.NoAction);
+                .WithMany(e => e.Missions)
+                .HasForeignKey(e => e.SoldierId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-                //entity.HasOne(e => e.MissionPosition)
-                //    .WithMany(e => e.Soldiers)
-                //    .HasForeignKey(e => e.MissionInstanceId)
-                //    .OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(e => e.MissionInstance)
+                .WithMany(e => e.Soldiers)
+                .HasForeignKey(e => e.MissionInstanceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.MissionPosition)
+                .WithMany(e => e.Soldiers)
+                .HasForeignKey(e => e.MissionPositionId)
+                .OnDelete(DeleteBehavior.NoAction);
             });
 
             modelBuilder.Entity<MissionPositions>(entity =>
@@ -155,6 +157,20 @@ namespace DataLayer
                     .WithMany(e => e.Vacations)
                     .HasForeignKey(e => e.SoldierId);
             });
+
+            modelBuilder.Entity<SoldierMissionCandidate>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.SoldierId)
+                    .IsRequired();
+                entity.Property(e => e.MissionInstanceId)
+                    .IsRequired();
+                entity.Property(e => e.MissionPositionId)
+                    .IsRequired();
+                entity.Property(e => e.CandidateId)
+                    .IsRequired();
+            });
         }
 
         public DbSet<Soldier> Soldiers { get; set; }
@@ -162,6 +178,7 @@ namespace DataLayer
         public DbSet<MissionInstance> MissionInstances { get; set; }
         public DbSet<MissionPositions> MissionPositions { get; set; }
         public DbSet<SoldierMission> SoldierMission { get; set; }
+        public DbSet<SoldierMissionCandidate> SoldierMissionCandidates { get; set; }
         public DbSet<Vacation> Vacations { get; set; }
     }
 }
