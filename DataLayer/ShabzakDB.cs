@@ -20,7 +20,7 @@ namespace DataLayer
         {
             if (!optionsBuilder.IsConfigured)
             {
-                var connectionString = @"Data Source=W11JZYGKG3;Initial Catalog=ShabzakDB;Integrated Security=True;Multiple Active Result Sets=True;Trust Server Certificate=True;Packet Size=16000;";
+                var connectionString = @"Data Source=192.168.1.126,1434;Initial Catalog=ShabzakDB;User Id=sa;Password=P@ssw0rd;Trust Server Certificate=True";
                 optionsBuilder.UseSqlServer(connectionString, builder => { 
                     builder.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
                 });

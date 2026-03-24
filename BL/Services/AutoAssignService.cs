@@ -670,7 +670,7 @@ namespace BL.Services
 
         private List<Position> GetSoldierPositions(Soldier soldier)
         {
-            return soldier.Position.Split([','], StringSplitOptions.RemoveEmptyEntries)
+            return soldier.Position.Split(",", StringSplitOptions.RemoveEmptyEntries)
                     .Select(s =>
                     {
                         if (int.TryParse(s, out int numericValue))

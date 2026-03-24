@@ -107,7 +107,7 @@ namespace BL.Extensions
 
         public static List<DataLayer.Models.Position> GetSoldierPositions(this DataLayer.Models.Soldier soldier)
         {
-            return soldier.Position.Split([','], StringSplitOptions.RemoveEmptyEntries)
+            return soldier.Position.Split(",", StringSplitOptions.RemoveEmptyEntries)
                     .Select(s =>
                     {
                         if (int.TryParse(s, out int numericValue))

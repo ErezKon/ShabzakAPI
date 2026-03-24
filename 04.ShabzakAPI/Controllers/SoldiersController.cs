@@ -20,12 +20,13 @@ namespace _04.ShabzakAPI.Controllers
         {
             _soldiersCache = soldiersCache;
             _soldierService = soldierService;
-            //soldierService.LoadSoldiersFromFile(@"C:\Users\Erez_Konforti\OneDrive - Dell Technologies\Documents\Shabzak Assets\soldiers.txt");
+            //soldierService.LoadSoldiersFromFile(@"/Shabzak/ShabzakAPI/DataLayer/soldiers.txt");
         }
 
         [HttpGet("LoadCSV")]
         public List<Soldier> LoadCSV()
         {
+            _soldierService.LoadSoldiersFromFile(@"/Shabzak/ShabzakAPI/DataLayer/soldiers.txt");
             //var path = @"C:\Parse\1.txt";
             //var solDic = System.IO.File.ReadAllLines(path)
             //    .Select(s =>
