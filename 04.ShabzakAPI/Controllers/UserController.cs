@@ -77,6 +77,10 @@ namespace ShabzakAPI.Controllers
             {
                 foreach (var soldier in soldiers)
                 {
+                    if(soldier.PersonalNumber.Equals("N/A"))
+                    {
+                        continue;
+                    }
                     ret.Add(_userService.CreateFromSoldier(soldier));
                 }
 

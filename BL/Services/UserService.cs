@@ -34,7 +34,7 @@ namespace BL.Services
             user.Salt = Guid.NewGuid().ToString();
             using var db = new DataLayer.ShabzakDB();
             user.Password = Sha512Encryptor.Encrypt($"{password}{user.Salt}");
-            var dbUser = user.ToDB().Encrypt();
+            var dbUser = user.ToDB();//.Encrypt();
             db.Users.Add(dbUser);
             db.SaveChanges();
             user.Id = dbUser.Id;

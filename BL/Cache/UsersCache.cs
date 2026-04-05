@@ -56,11 +56,16 @@ namespace BL.Cache
 
             //db.SaveChanges();
 
+            var allUsers = db.Users
+                //.ToList()
+                //.Select(s => s.Decrypt())
+                .ToList();
+
             usersDic = db.Users
-                .ToList()
-                .Select(s => s.Decrypt())
-                .GroupBy(s => s.Name)
-                .ToDictionary(k => k.Key, v => v.Single());
+            .ToList()
+            //.Select(s => s.Decrypt())
+            .GroupBy(s => s.Name)
+            .ToDictionary(k => k.Key, v => v.Single());
 
             Logger.Log($"Loaded {usersDic.Count()} users to cache");
         }
@@ -78,7 +83,7 @@ namespace BL.Cache
                     .FirstOrDefault(u => u.Name.Equals(username));
                 if(user != null)
                 {
-                    AddUser(user.Decrypt());
+                    AddUser(user);
                 }
                 return user;
             }
