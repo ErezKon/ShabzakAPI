@@ -162,6 +162,7 @@ namespace BL.Services
                 To = to,
                 Approved = VacationRequestStatus.Pending
             };
+            vacation.Soldier = null;
             using var db = new ShabzakDB();
             db.Vacations.Add(vacation);
             db.SaveChanges();
