@@ -434,9 +434,18 @@ namespace BL.Services
         public void RemoveSoldierFromMissionInstance(int soldierId, int missionInstanceId)
         {
             using var db = new ShabzakDB();
+            var instance = db.MissionInstances
+                .Include(mi => mi.Mission)
+                .First(mi => mi.Id == missionInstanceId);
             var model = db.SoldierMission
                 .FirstOrDefault(mi => mi.SoldierId == soldierId && mi.MissionInstanceId == missionInstanceId)
                 ?? throw new ArgumentException("Soldier assignment not found");
+            var totalPositions = instance.Mission.MissionPositions.Sum(mp => mp.Count);
+            var assignedPositions = db.SoldierMission.Count(sm => sm.MissionInstanceId == missionInstanceId);
+            if((assignedPositions - 1) < totalPositions)
+            {
+                instance.IsFilled = false;
+            }
             db.SoldierMission.Remove(model);
             db.SaveChanges();
         }
