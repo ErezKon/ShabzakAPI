@@ -20,6 +20,8 @@ namespace BL.Models
         public string? StartingMissionName { get; set; }
         public double? EvennessScore { get; set; }
         public bool IsBestCandidate { get; set; }
+        public Dictionary<string, List<CandidateMissionInstance>> SkippedInstances { get; set; }
+        public int SkippedInstancesCount { get; set; }
 
     }
 }

@@ -22,5 +22,6 @@ namespace BL.Models
         public AutoAssignScoringOptions ScoringOptions { get; set; } = new();
         public int JitterSeed { get; set; }
         public Dictionary<int, List<CandidateSoldierAssignment>> CandidatesPerInstance { get; set; } = new();
+        public HashSet<int> SkippedInstanceIds { get; set; } = new();
     }
 }

@@ -289,10 +289,21 @@ namespace BL.Services
                 .ToList();
 
             ctx.CandidatesPerInstance = new Dictionary<int, List<CandidateSoldierAssignment>>();
+            ctx.SkippedInstanceIds = new HashSet<int>();
 
             foreach (var instance in orderedInstances)
             {
                 Logger.LogToMemory($"[Sch#{scheduleIndex} start={startingMission.Id}] Assigning to instance: {instance.Id}", LogLevel.Info);
+
+                var originalSoldiers = ctx.OriginalSoldiersByInstanceId.TryGetValue(instance.Id, out var orig) ? orig : [];
+                if (originalSoldiers.Count > 0)
+                {
+                    ctx.SkippedInstanceIds.Add(instance.Id);
+                    ctx.CandidatesPerInstance.Add(instance.Id, []);
+                    Logger.LogToMemory($"Instance {instance.Id} already has {originalSoldiers.Count} accepted assignment(s), skipping.", LogLevel.Info);
+                    continue;
+                }
+
                 if (IsInstanceFilledInMemory(instance))
                 {
                     ctx.CandidatesPerInstance.Add(instance.Id, []);
@@ -856,7 +867,9 @@ namespace BL.Services
                 ValidInstancesCount = 0,
                 TotalInstancesCount = 0,
                 FaultyInstances = [],
-                ValidInstances = []
+                ValidInstances = [],
+                SkippedInstances = [],
+                SkippedInstancesCount = 0
             };
             if (!instances.Any())
             {
@@ -879,6 +892,25 @@ namespace BL.Services
                 foreach (var instance in relevantInstances)
                 {
                     ret.TotalInstancesCount++;
+
+                    if (ctx.SkippedInstanceIds.Contains(instance.Id))
+                    {
+                        ret.SkippedInstancesCount++;
+                        var skippedMi = instance.ToBL(false, true);
+                        if (!ret.SkippedInstances.ContainsKey(instance.Mission.Name))
+                        {
+                            ret.SkippedInstances[instance.Mission.Name] = [];
+                        }
+                        ret.SkippedInstances[instance.Mission.Name].Add(new CandidateMissionInstance
+                        {
+                            Id = skippedMi.Id,
+                            FromTime = skippedMi.FromTime,
+                            ToTime = skippedMi.ToTime,
+                            SoldierMissions = skippedMi.SoldierMissions
+                        });
+                        continue;
+                    }
+
                     var assignedCommanders = 0;
                     var assignedNonCommanders = 0;
                     foreach (var soldierMission in instance.Soldiers)
@@ -1382,7 +1414,9 @@ namespace BL.Services
                         ValidInstancesCount = 0,
                         TotalInstancesCount = 0,
                         FaultyInstances = new(),
-                        ValidInstances = new()
+                        ValidInstances = new(),
+                        SkippedInstances = new(),
+                        SkippedInstancesCount = 0
                     }
                 };
             }
@@ -1520,6 +1554,19 @@ namespace BL.Services
                 var instanceId = session.OrderedInstanceIds[session.CurrentIndex];
                 if (!instanceDic.TryGetValue(instanceId, out var instance))
                 {
+                    session.CurrentIndex++;
+                    continue;
+                }
+
+                var originalSoldiers = ctx.OriginalSoldiersByInstanceId.TryGetValue(instanceId, out var orig) ? orig : [];
+                if (originalSoldiers.Count > 0)
+                {
+                    ctx.SkippedInstanceIds.Add(instanceId);
+                    if (!ctx.CandidatesPerInstance.ContainsKey(instanceId))
+                    {
+                        ctx.CandidatesPerInstance[instanceId] = new List<CandidateSoldierAssignment>();
+                    }
+                    Logger.LogToMemory($"Interactive: Instance {instanceId} already has {originalSoldiers.Count} accepted assignment(s), skipping.", LogLevel.Info);
                     session.CurrentIndex++;
                     continue;
                 }
