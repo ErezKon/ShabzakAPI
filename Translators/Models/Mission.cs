@@ -20,6 +20,8 @@ namespace Translators.Models
         public string? ToTime { get; set; }
         public bool IsSpecial { get; set; }
         public bool RequiredInstances { get; set; }
+        public double? ActualHours { get; set; }
+        public int? RequiredRestAfter { get; set; }
 
         public List<MissionPosition> Positions { get; set;}
         public List<MissionInstance> MissionInstances { get; set; }

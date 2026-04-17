@@ -36,6 +36,9 @@ namespace DataLayer.Models
 
         public bool RequiredInstances { get; set; }
 
+        public double? ActualHours { get; set; }
+        public int? RequiredRestAfter { get; set; }
+
         public virtual ICollection<MissionInstance> MissionInstances { get; set; }
         public virtual ICollection<MissionPositions> MissionPositions { get; set; }
 
@@ -51,6 +54,8 @@ namespace DataLayer.Models
             ret.FromTime = FromTime;
             ret.ToTime = ToTime;
             ret.IsSpecial = IsSpecial;
+            ret.ActualHours = ActualHours;
+            ret.RequiredRestAfter = RequiredRestAfter;
             ret.MissionInstances = MissionInstances?.ToList() ?? [];
             ret.MissionPositions = MissionPositions?.ToList() ?? [];
             return ret;

@@ -29,7 +29,7 @@ namespace _04.ShabzakAPI.Controllers
         [HttpGet("LoadCSV")]
         public List<Soldier> LoadCSV()
         {
-            _soldierService.LoadSoldiersFromFile(@"/Shabzak/ShabzakAPI/DataLayer/soldiers.txt");
+            _soldierService.LoadSoldiersFromFile(@"C:\Users\Erez_Konforti\OneDrive - Dell Technologies\Documents\repos\Shabzak\ShabzakAPI\DataLayer\soldiers.txt");
             //var path = @"C:\Parse\1.txt";
             //var solDic = System.IO.File.ReadAllLines(path)
             //    .Select(s =>

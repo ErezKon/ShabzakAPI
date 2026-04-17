@@ -109,6 +109,8 @@ namespace BL.Services
                 dbModel.FromTime = mission.FromTime;
                 dbModel.ToTime = mission.ToTime;
                 dbModel.IsSpecial = mission.IsSpecial;
+                dbModel.ActualHours = mission.ActualHours;
+                dbModel.RequiredRestAfter = mission.RequiredRestAfter;
                 db.MissionInstances.RemoveRange(dbModel.MissionInstances);
 
                 dbModel.MissionInstances = mission.MissionInstances
@@ -192,9 +194,11 @@ namespace BL.Services
             using var db = new DataLayer.ShabzakDB();
 
             var missionInstance = db.MissionInstances
+                .Include(mi => mi.Mission)
                 .First(mi => mi.Id == missionInstanceId);
             var startTime = missionInstance.FromTime;
             var endTime = missionInstance.ToTime;
+            var currentMissionRest = missionInstance.Mission?.RequiredRestAfter;
 
             var pool = soldiersPool != null ? soldiersPool : db.Soldiers.Select(s => s.Id).ToList();
 
@@ -203,6 +207,7 @@ namespace BL.Services
                 var model = new GetAvailableSoldiersModel
                 {
                     Soldier = _soldiersCache.GetSoldierById(soldierId),
+                    RequiredRestAfterThreshold = currentMissionRest,
                 };
                 model.Soldier.Missions = [];
                 var assignedForInstance = db.SoldierMission
@@ -218,6 +223,7 @@ namespace BL.Services
                 var soldierMissions = db.SoldierMission
                     .Where(mi => mi.SoldierId == soldierId)
                     .Include(sm => sm.MissionInstance)
+                    .Include(sm => sm.MissionInstance.Mission)
                     .Include(sm => sm.Soldier)
                     .OrderBy(sm => sm.MissionInstance.FromTime)
                     .ToList();
@@ -234,12 +240,21 @@ namespace BL.Services
                         if(sm.MissionInstance.ToTime <= startTime)
                         {
                             var diff = startTime - sm.MissionInstance.ToTime;
-                            model.RestTimeBefore = diff.Hours;
+                            var diffHours = (int)diff.TotalHours;
+                            if (model.RestTimeBefore == null || diffHours < model.RestTimeBefore)
+                            {
+                                model.RestTimeBefore = diffHours;
+                                model.RequiredRestBeforeThreshold = sm.MissionInstance.Mission?.RequiredRestAfter;
+                            }
                         }
                         if(sm.MissionInstance.FromTime > endTime)
                         {
                             var diff = sm.MissionInstance.FromTime - endTime;
-                            model.RestTimeAfter = diff.Hours;
+                            var diffHours = (int)diff.TotalHours;
+                            if (model.RestTimeAfter == null || diffHours < model.RestTimeAfter)
+                            {
+                                model.RestTimeAfter = diffHours;
+                            }
                         }
                     }
                 }

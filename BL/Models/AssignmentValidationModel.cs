@@ -16,6 +16,10 @@ namespace BL.Models
         public int TotalInstancesCount { get; set; }
         public Dictionary<string, List<CandidateMissionInstance>> FaultyInstances { get; set; }
         public Dictionary<string, List<CandidateMissionInstance>> ValidInstances { get; set; }
+        public int? StartingMissionId { get; set; }
+        public string? StartingMissionName { get; set; }
+        public double? EvennessScore { get; set; }
+        public bool IsBestCandidate { get; set; }
 
     }
 }

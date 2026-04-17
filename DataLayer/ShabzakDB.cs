@@ -20,7 +20,8 @@ namespace DataLayer
         {
             if (!optionsBuilder.IsConfigured)
             {
-                var connectionString = @"Data Source=192.168.1.126,1434;Initial Catalog=ShabzakDB;User Id=sa;Password=P@ssw0rd;Trust Server Certificate=True";
+                //var connectionString = @"Data Source=10.55.136.14;Initial Catalog=ShabzakDB;User Id=sa;Password=P@ssw0rd;Trust Server Certificate=True;Encrypt=False";
+                var connectionString = @"Server=tcp:shabzakdb.database.windows.net,1433;Initial Catalog=ShabzakDB;Persist Security Info=False;User ID=erez;Password=Q1w2E3r4;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=120;";
                 optionsBuilder.UseSqlServer(connectionString, builder => { 
                     builder.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
                 });
@@ -223,6 +224,20 @@ namespace DataLayer
                     .IsRequired();
             });
 
+            modelBuilder.Entity<InteractiveAutoAssignLog>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.SessionId)
+                    .IsRequired();
+                entity.Property(e => e.MissionInstanceId)
+                    .IsRequired();
+                entity.Property(e => e.Action)
+                    .IsRequired();
+                entity.Property(e => e.Timestamp)
+                    .IsRequired();
+            });
+
             //modelBuilder.Entity<UserToken>(entity =>
             //{
             //    entity.HasKey(e => e.Id);
@@ -249,6 +264,7 @@ namespace DataLayer
         public DbSet<SoldierMissionCandidate> SoldierMissionCandidates { get; set; }
         public DbSet<Vacation> Vacations { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<InteractiveAutoAssignLog> InteractiveAutoAssignLogs { get; set; }
         //public DbSet<UserToken> UserTokens { get; set; }
     }
 }

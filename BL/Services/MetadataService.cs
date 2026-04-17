@@ -110,8 +110,15 @@ namespace BL.Services
                 };
                 foreach(var hour in soldierCount.Value)
                 {
-                    var span = hour.MissionInstance.ToTime - hour.MissionInstance.FromTime;
-                    hours.TotalHours += (span.TotalMilliseconds / 1000 / 60 / 60);
+                    if (hour.Mission?.ActualHours.HasValue == true && hour.Mission.ActualHours.Value > 0)
+                    {
+                        hours.TotalHours += hour.Mission.ActualHours.Value;
+                    }
+                    else
+                    {
+                        var span = hour.MissionInstance.ToTime - hour.MissionInstance.FromTime;
+                        hours.TotalHours += (span.TotalMilliseconds / 1000 / 60 / 60);
+                    }
                 }
                 ret.Add(hours);
             }

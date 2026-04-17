@@ -53,6 +53,8 @@ namespace ShabzakAPI.Controllers
                 Duration = mission.Duration,
                 SoldiersRequired = mission.SoldiersRequired,
                 CommandersRequired = mission.CommandersRequired,
+                ActualHours = mission.ActualHours,
+                RequiredRestAfter = mission.RequiredRestAfter,
                 Positions = mission.Positions,
                 MissionInstances = mission.MissionInstances
                     ?.Select(i =>
@@ -141,8 +143,14 @@ namespace ShabzakAPI.Controllers
         [HttpPost("AutoAssign")]
         public List<AssignmentValidationModel> AutoAssign(AutoAssignModel model)
         {
-            var ret = _autoAssignService.AutoAssign(model.StartDate, model.EndDate, model.Missions, model.Soldiers);
-            return [ret];
+            var ret = _autoAssignService.AutoAssign(
+                model.StartDate,
+                model.EndDate,
+                model.Missions,
+                model.Soldiers,
+                model.MaxSchedules,
+                model.ScoringOptions);
+            return ret;
         }
 
         [HttpPost("AcceptAssignCandidate")]
@@ -179,6 +187,51 @@ namespace ShabzakAPI.Controllers
             _autoAssignService.RemoveSoldierFromMissionInstance(soldierId, missionInstanceId);
             return GetMissions();
 
+        }
+
+        [HttpPost("StartInteractiveAutoAssign")]
+        public ActionResult<InteractiveAutoAssignStep> StartInteractiveAutoAssign(StartInteractiveAutoAssignModel model)
+        {
+            try
+            {
+                var ret = _autoAssignService.StartInteractive(
+                    model.StartDate,
+                    model.EndDate,
+                    model.Missions,
+                    model.Soldiers,
+                    model.ScoringOptions,
+                    model.PauseOn,
+                    model.ShowAllSoldiersOnPause);
+                return Ok(ret);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("ContinueInteractiveAutoAssign")]
+        public ActionResult<InteractiveAutoAssignStep> ContinueInteractiveAutoAssign(ContinueInteractiveAutoAssignModel model)
+        {
+            try
+            {
+                var ret = _autoAssignService.ContinueInteractive(
+                    model.SessionId,
+                    model.Picks,
+                    model.SkipInstance);
+                return Ok(ret);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("CancelInteractiveAutoAssign")]
+        public ActionResult CancelInteractiveAutoAssign(string sessionId)
+        {
+            _autoAssignService.CancelInteractive(sessionId);
+            return NoContent();
         }
     }
 }

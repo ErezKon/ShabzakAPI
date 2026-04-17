@@ -13,6 +13,8 @@ namespace ShabzakAPI.ViewModels
         public string? FromTime { get; set; }
         public string? ToTime { get; set; }
         public bool IsSpecial { get; set; }
+        public double? ActualHours { get; set; }
+        public int? RequiredRestAfter { get; set; }
         public List<MissionPosition> Positions { get; set; }
         public List<AddEditMissionInstance> MissionInstances { get; set; }
     }
