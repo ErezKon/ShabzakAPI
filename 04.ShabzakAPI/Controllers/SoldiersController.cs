@@ -119,9 +119,9 @@ namespace _04.ShabzakAPI.Controllers
         }
 
         [HttpGet("GetSoldiers")]
-        public List<Soldier> GetSoldiers()
+        public List<Soldier> GetSoldiers(bool reloadCache = false)
         {
-            var soldiers = _soldiersCache.GetSoldiers();
+            var soldiers = _soldiersCache.GetSoldiers(reloadCache);
             return soldiers;
         }
 

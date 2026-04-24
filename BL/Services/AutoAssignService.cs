@@ -806,7 +806,7 @@ namespace BL.Services
                                 restBeforeThreshold = iRequiredRestAfter;
                             }
                         }
-                        else if (iFrom > endTime)
+                        else if (iFrom >= endTime)
                         {
                             var diff = (int)(iFrom - endTime).TotalHours;
                             if (restAfter == null || diff < restAfter) restAfter = diff;

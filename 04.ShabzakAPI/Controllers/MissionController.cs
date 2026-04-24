@@ -233,5 +233,24 @@ namespace ShabzakAPI.Controllers
             _autoAssignService.CancelInteractive(sessionId);
             return NoContent();
         }
+
+        [HttpPost("GetReplacementCandidates")]
+        public List<ReplacementCandidateModel> GetReplacementCandidates(GetReplacementCandidatesRequest request)
+        {
+            var ret = _missionService.GetReplacementCandidates(request.MissionInstanceId, request.ExcludeSoldierId);
+            return ret;
+        }
+
+        [HttpPost("ReplaceSoldierInMissionInstance")]
+        public List<Mission> ReplaceSoldierInMissionInstance(ReplaceSoldierRequest request)
+        {
+            _missionService.ReplaceSoldierInMissionInstance(
+                request.MissionInstanceId,
+                request.OldSoldierId,
+                request.NewSoldierId,
+                request.Swap,
+                request.SwapMissionInstanceId);
+            return GetMissions();
+        }
     }
 }

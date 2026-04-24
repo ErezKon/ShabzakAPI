@@ -366,5 +366,254 @@ namespace BL.Services
                 endTime1.IsBetweenDates(startTime2, endTime2) ||
                 endTime2.IsBetweenDates(startTime1, endTime1);
         }
+
+        public List<ReplacementCandidateModel> GetReplacementCandidates(int missionInstanceId, int excludeSoldierId)
+        {
+            var ret = new List<ReplacementCandidateModel>();
+            using var db = new DataLayer.ShabzakDB();
+
+            var missionInstance = db.MissionInstances
+                .Include(mi => mi.Mission)
+                .Include(mi => mi.Mission.MissionPositions)
+                .First(mi => mi.Id == missionInstanceId);
+            var startTime = missionInstance.FromTime;
+            var endTime = missionInstance.ToTime;
+            var currentMissionRest = missionInstance.Mission?.RequiredRestAfter;
+
+            var pool = db.Soldiers
+                .Where(s => s.Id != excludeSoldierId)
+                .Select(s => s.Id)
+                .ToList();
+
+            var avgAssignmentCount = 0.0;
+            var totalSoldiers = pool.Count;
+            if (totalSoldiers > 0)
+            {
+                var totalAssignments = db.SoldierMission.Count();
+                avgAssignmentCount = (double)totalAssignments / totalSoldiers;
+            }
+
+            foreach (var soldierId in pool)
+            {
+                var model = new ReplacementCandidateModel
+                {
+                    Soldier = _soldiersCache.GetSoldierById(soldierId),
+                };
+                model.Soldier.Missions = [];
+
+                var assignedForInstance = db.SoldierMission
+                    .Count(sm => sm.SoldierId == soldierId && sm.MissionInstanceId == missionInstanceId) > 0;
+
+                if (assignedForInstance)
+                {
+                    model.IsAssignedToThisInstance = true;
+                    model.RestTimeAfter = 0;
+                    model.RestTimeBefore = 0;
+                    model.Score = 0;
+                    ret.Add(model);
+                    continue;
+                }
+
+                var soldierMissions = db.SoldierMission
+                    .Where(mi => mi.SoldierId == soldierId)
+                    .Include(sm => sm.MissionInstance)
+                    .Include(sm => sm.MissionInstance.Mission)
+                    .Include(sm => sm.Soldier)
+                    .OrderBy(sm => sm.MissionInstance.FromTime)
+                    .ToList();
+
+                int? overlappingInstanceId = null;
+                string? overlappingMissionName = null;
+
+                if (soldierMissions.Count > 0)
+                {
+                    foreach (var sm in soldierMissions)
+                    {
+                        if (OverlappingTimes(startTime, endTime, sm.MissionInstance.FromTime, sm.MissionInstance.ToTime))
+                        {
+                            model.RestTimeBefore = 0;
+                            model.RestTimeAfter = 0;
+                            overlappingInstanceId = sm.MissionInstance.Id;
+                            overlappingMissionName = sm.MissionInstance.Mission.Name;
+                            break;
+                        }
+                        if (sm.MissionInstance.ToTime <= startTime)
+                        {
+                            var diff = startTime - sm.MissionInstance.ToTime;
+                            var diffHours = (int)diff.TotalHours;
+                            if (model.RestTimeBefore == null || diffHours < model.RestTimeBefore)
+                            {
+                                model.RestTimeBefore = diffHours;
+                            }
+                        }
+                        if (sm.MissionInstance.FromTime > endTime)
+                        {
+                            var diff = sm.MissionInstance.FromTime - endTime;
+                            var diffHours = (int)diff.TotalHours;
+                            if (model.RestTimeAfter == null || diffHours < model.RestTimeAfter)
+                            {
+                                model.RestTimeAfter = diffHours;
+                            }
+                        }
+                    }
+                }
+
+                model.HasOverlap = overlappingInstanceId.HasValue;
+                model.OverlappingMissionInstanceId = overlappingInstanceId;
+                model.OverlappingMissionName = overlappingMissionName;
+
+                var positions = missionInstance.Mission?.MissionPositions?.ToList() ?? [];
+
+                double positionScore = ComputePositionScore(model.Soldier, positions);
+                double restScore = ComputeRestScore(model.RestTimeBefore, model.RestTimeAfter, currentMissionRest);
+                double fairnessScore = ComputeFairnessScore(soldierId, avgAssignmentCount, db);
+
+                model.Score = positionScore * restScore * fairnessScore;
+
+                ret.Add(model);
+            }
+
+            foreach (var r in ret)
+            {
+                r.Soldier.Positions = r.Soldier.Positions
+                    .OrderByDescending(p => p)
+                    .ToList();
+            }
+
+            return ret
+                .OrderByDescending(r => r.Score)
+                .ThenByDescending(r => r.RestTimeBefore ?? int.MaxValue)
+                .ThenByDescending(r => r.RestTimeAfter ?? int.MaxValue)
+                .ToList();
+        }
+
+        private double ComputePositionScore(Soldier soldier, List<DataLayer.Models.MissionPositions> missionPositions)
+        {
+            if (missionPositions == null || missionPositions.Count == 0)
+                return 1.0;
+
+            var soldierPositions = soldier.Positions;
+            if (soldierPositions == null || soldierPositions.Count == 0)
+                return 0.1;
+
+            var missionPositionEnums = missionPositions.Select(mp => (Translators.Models.Position)(int)mp.Position).ToList();
+
+            foreach (var soldierPos in soldierPositions)
+            {
+                if (missionPositionEnums.Contains(soldierPos))
+                    return 1.0;
+            }
+
+            var soldierHasCommanding = soldierPositions.Any(p => p.IsCommandingPosition());
+            var missionRequiresCommanding = missionPositionEnums.Any(p => p.IsCommandingPosition());
+
+            if (soldierHasCommanding && missionRequiresCommanding)
+                return 0.7;
+
+            if (soldierHasCommanding || missionRequiresCommanding)
+                return 0.5;
+
+            return 0.3;
+        }
+
+        private double ComputeRestScore(int? restTimeBefore, int? restTimeAfter, int? requiredRestThreshold)
+        {
+            var t = requiredRestThreshold ?? 8;
+            if (t == 0) return 1.0;
+
+            var beforeScore = ComputeRestSideScore(restTimeBefore, t);
+            var afterScore = ComputeRestSideScore(restTimeAfter, t);
+
+            if (beforeScore == 0.0 || afterScore == 0.0) return 0.0;
+            return Math.Min(beforeScore, afterScore);
+        }
+
+        private static double ComputeRestSideScore(int? restTime, int requiredRestThreshold)
+        {
+            var rest = restTime ?? int.MaxValue;
+            if (rest == 0) return 0.0;
+            if (rest == int.MaxValue) return 1.0;
+            if (rest >= (int)(requiredRestThreshold * 1.5)) return 0.9;
+            if (rest >= (int)(requiredRestThreshold * 1.25)) return 0.8;
+            if (rest >= requiredRestThreshold) return 0.7;
+            return 0.1;
+        }
+
+        private double ComputeFairnessScore(int soldierId, double avgAssignmentCount, DataLayer.ShabzakDB db)
+        {
+            if (avgAssignmentCount == 0) return 1.0;
+
+            var soldierCount = db.SoldierMission.Count(sm => sm.SoldierId == soldierId);
+            var diff = soldierCount - avgAssignmentCount;
+
+            if (diff <= 0) return 1.0;
+            if (diff <= avgAssignmentCount * 0.1) return 0.9;
+            if (diff <= avgAssignmentCount * 0.25) return 0.7;
+            if (diff <= avgAssignmentCount * 0.5) return 0.5;
+            return 0.2;
+        }
+
+        public List<Mission> ReplaceSoldierInMissionInstance(int missionInstanceId, int oldSoldierId, int newSoldierId, bool swap, int? swapMissionInstanceId)
+        {
+            using var db = new DataLayer.ShabzakDB();
+
+            var oldAssignment = db.SoldierMission
+                .FirstOrDefault(sm => sm.SoldierId == oldSoldierId && sm.MissionInstanceId == missionInstanceId)
+                ?? throw new ArgumentException("Old soldier assignment not found");
+
+            var oldMissionPositionId = oldAssignment.MissionPositionId;
+
+            db.SoldierMission.Remove(oldAssignment);
+
+            if (swap && swapMissionInstanceId.HasValue)
+            {
+                var newAssignment = db.SoldierMission
+                    .FirstOrDefault(sm => sm.SoldierId == newSoldierId && sm.MissionInstanceId == swapMissionInstanceId.Value)
+                    ?? throw new ArgumentException("New soldier assignment in swap instance not found");
+
+                var swapMissionPositionId = newAssignment.MissionPositionId;
+
+                db.SoldierMission.Remove(newAssignment);
+
+                db.SoldierMission.Add(new DataLayer.Models.SoldierMission
+                {
+                    Id = 0,
+                    SoldierId = oldSoldierId,
+                    MissionInstanceId = swapMissionInstanceId.Value,
+                    MissionPositionId = swapMissionPositionId
+                });
+
+                var swapInstance = db.MissionInstances
+                    .Include(mi => mi.Mission)
+                    .Include(mi => mi.Mission.MissionPositions)
+                    .FirstOrDefault(mi => mi.Id == swapMissionInstanceId.Value);
+                if (swapInstance != null)
+                {
+                    swapInstance.IsInstanceFilled();
+                }
+            }
+
+            db.SoldierMission.Add(new DataLayer.Models.SoldierMission
+            {
+                Id = 0,
+                SoldierId = newSoldierId,
+                MissionInstanceId = missionInstanceId,
+                MissionPositionId = oldMissionPositionId
+            });
+
+            var originalInstance = db.MissionInstances
+                .Include(mi => mi.Mission)
+                .Include(mi => mi.Mission.MissionPositions)
+                .FirstOrDefault(mi => mi.Id == missionInstanceId);
+            if (originalInstance != null)
+            {
+                originalInstance.IsInstanceFilled();
+            }
+
+            db.SaveChanges();
+            MissionsCache.ReloadAsync();
+
+            return GetMissions();
+        }
     }
 }

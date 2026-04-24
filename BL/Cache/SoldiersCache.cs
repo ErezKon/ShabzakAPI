@@ -48,12 +48,15 @@ namespace BL.Cache
 
             dbSoldiersDic = db.Soldiers
                 .Include(s => s.Missions)
-                .ThenInclude(m => m.MissionInstance)
+                    .ThenInclude(sm => sm.MissionPosition)
+                .Include(s => s.Missions)
+                    .ThenInclude(m => m.MissionInstance)
                 .Include(s => s.Vacations)
                 .ToList()
                 .Select(s => s.Decrypt())
                 .GroupBy(s => s.Id)
                 .ToDictionary(k => k.Key, v => v.Single());
+
 
             soldiersDic = DbSoldiers
                 .Select(s => SoldierTranslator.ToBL(s, true, true, true))
@@ -78,7 +81,14 @@ namespace BL.Cache
             }
         }
 
-        public List<Soldier> GetSoldiers() => Soldiers.ToList();
+        public List<Soldier> GetSoldiers(bool reloadCache = false)
+        {
+            if (reloadCache)
+            {
+                ReloadCache();
+            }
+            return Soldiers.ToList();
+        }
         public List<DataLayer.Models.Soldier> GetDBSoldiers() => DbSoldiers.ToList();
 
         public void UpdateSoldier(Soldier soldier)
