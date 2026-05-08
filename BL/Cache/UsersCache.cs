@@ -13,6 +13,10 @@ using Translators.Translators;
 
 namespace BL.Cache
 {
+    /// <summary>
+    /// Singleton in-memory cache for user data. Stores DB user entities keyed by hashed username.
+    /// Auto-reloads every 5 minutes. Thread-safe via locking on the dictionary.
+    /// </summary>
     public class UsersCache
     {
         private static UsersCache Instance { get; set; }
@@ -27,6 +31,9 @@ namespace BL.Cache
             }, null, TimeSpan.Zero, TimeSpan.FromMinutes(5));
         }
 
+        /// <summary>
+        /// Returns the singleton instance, creating it if necessary (double-checked locking).
+        /// </summary>
         public static UsersCache GetInstance()
         {
             lock (mutex)
@@ -42,6 +49,10 @@ namespace BL.Cache
             }
         }
 
+        /// <summary>
+        /// Reloads all users from the database into memory.
+        /// Builds a dictionary keyed by username (hashed) for fast lookup.
+        /// </summary>
         public void ReloadCache()
         {
             using var db = new DataLayer.ShabzakDB();
@@ -70,6 +81,12 @@ namespace BL.Cache
             Logger.Log($"Loaded {usersDic.Count()} users to cache");
         }
 
+        /// <summary>
+        /// Retrieves a user by hashed username. Falls back to DB lookup if not in cache,
+        /// and adds the result to cache for future lookups.
+        /// </summary>
+        /// <param name="username">The SHA-512 hashed username to look up.</param>
+        /// <returns>The DB user entity, or null if not found.</returns>
         public DataLayer.Models.User? GetUser(string username)
         {
             lock (usersDic)
@@ -89,6 +106,10 @@ namespace BL.Cache
             }
         }
 
+        /// <summary>
+        /// Adds or updates a user in the cache dictionary.
+        /// </summary>
+        /// <param name="user">The DB user entity to cache.</param>
         public void AddUser(DataLayer.Models.User user)
         {
             lock (usersDic)

@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace DataLayer.Models
 {
+    /// <summary>
+    /// Enum of vacation request approval states.
+    /// </summary>
     public enum VacationRequestStatus
     {
         Pending,

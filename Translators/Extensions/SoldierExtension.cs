@@ -8,6 +8,10 @@ using Translators.Encryption;
 
 namespace Translators.Extensions
 {
+    /// <summary>
+    /// Low-level encryption/decryption extension methods for DB Soldier entities.
+    /// Handles Name, Phone, PersonalNumber, Position, Platoon, and Company fields.
+    /// </summary>
     public static class SoldierExtension
     {
         private static readonly string naEncrypted;
@@ -20,6 +24,9 @@ namespace Translators.Extensions
             naEncrypted = encryptor.Encrypt("N/A");
         }
 
+        /// <summary>
+        /// Decrypts PII fields on a DB soldier entity using AES-256.
+        /// </summary>
         public static Soldier Decrypt(this Soldier soldier)
         {
             if (soldier != null)
@@ -36,6 +43,10 @@ namespace Translators.Extensions
             }
             return soldier;
         }
+        /// <summary>
+        /// Encrypts PII fields on a DB soldier entity using AES-256.
+        /// Null/empty fields are replaced with encrypted "N/A".
+        /// </summary>
         public static DataLayer.Models.Soldier Encrypt(this DataLayer.Models.Soldier soldier)
         {
             if (string.IsNullOrEmpty(soldier.Name))

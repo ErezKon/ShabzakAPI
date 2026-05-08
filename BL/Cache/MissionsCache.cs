@@ -11,6 +11,10 @@ using Translators.Translators;
 
 namespace BL.Cache
 {
+    /// <summary>
+    /// Singleton in-memory cache for mission data. Stores both DB entities and BL models.
+    /// Auto-reloads every 5 minutes. Decrypts mission data on load. Thread-safe via locking.
+    /// </summary>
     public class MissionsCache
     {
         private static MissionsCache Instance { get; set; }
@@ -25,6 +29,9 @@ namespace BL.Cache
                 ReloadCache();
             }, null, TimeSpan.Zero, TimeSpan.FromMinutes(5));
         }
+        /// <summary>
+        /// Asynchronously reloads the cache on a background thread.
+        /// </summary>
         public static Task ReloadAsync()
         {
             return Task.Factory.StartNew(() =>
@@ -33,6 +40,10 @@ namespace BL.Cache
             });
         }
 
+        /// <summary>
+        /// Reloads all missions from the database into memory.
+        /// Includes mission positions and instances. Decrypts and translates to BL models.
+        /// </summary>
         public static void ReloadCache()
         {
             using var db = new DataLayer.ShabzakDB();
@@ -55,6 +66,9 @@ namespace BL.Cache
             Logger.Log($"Loaded {Missions.Count()} Missions to cache");
         }
 
+        /// <summary>
+        /// Returns the singleton instance, creating it if necessary (double-checked locking).
+        /// </summary>
         public static MissionsCache GetInstance()
         {
             lock (Missions)
@@ -70,9 +84,20 @@ namespace BL.Cache
             }
         }
 
+        /// <summary>
+        /// Returns all cached missions as BL models.
+        /// </summary>
         public List<Mission> GetMissions() => Missions.ToList();
+        /// <summary>
+        /// Returns all cached missions as raw DB entities.
+        /// </summary>
         public List<DataLayer.Models.Mission> GetDBMissions() => DbMissions.ToList();
 
+        /// <summary>
+        /// Checks if a mission with the given ID exists in the cache.
+        /// </summary>
+        /// <param name="missionId">The mission ID to check.</param>
+        /// <returns>True if the mission exists in cache.</returns>
         public bool ContainsKey(int missionId)
         {
             lock(missionDic)
@@ -81,6 +106,13 @@ namespace BL.Cache
             }
         }
 
+        /// <summary>
+        /// Retrieves a cached BL mission by ID. Optionally strips instance data.
+        /// Returns null if not found.
+        /// </summary>
+        /// <param name="id">The mission ID.</param>
+        /// <param name="includeInstances">If false, clears MissionInstances from the returned clone.</param>
+        /// <returns>The cached mission or null.</returns>
         public Mission GetMissionById(int id, bool includeInstances = true)
         {
             lock (missionDic)
@@ -98,6 +130,10 @@ namespace BL.Cache
             return null;
         }
 
+        /// <summary>
+        /// Replaces an existing mission in the cache with updated data.
+        /// </summary>
+        /// <param name="Mission">The updated mission BL model.</param>
         public void UpdateMission(Mission Mission)
         {
             Missions = Missions
@@ -106,6 +142,10 @@ namespace BL.Cache
                 .ToList();
         }
 
+        /// <summary>
+        /// Adds a new mission to the cache.
+        /// </summary>
+        /// <param name="Mission">The mission to add.</param>
         public void AddMission(Mission Mission)
         {
             Missions = Missions

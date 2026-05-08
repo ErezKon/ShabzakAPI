@@ -7,8 +7,14 @@ using Translators.Models;
 
 namespace Translators.Translators
 {
+    /// <summary>
+    /// Translates Vacation entities between DataLayer DB models and BL models.
+    /// </summary>
     public abstract class VacationTranslator
     {
+        /// <summary>
+        /// Converts a DB Vacation entity to a BL Vacation model.
+        /// </summary>
         public static Vacation ToBL(DataLayer.Models.Vacation vac)
         {
             return new Vacation()
@@ -21,6 +27,9 @@ namespace Translators.Translators
         }
 
 
+        /// <summary>
+        /// Converts a BL Vacation model to a DB Vacation entity.
+        /// </summary>
         public static DataLayer.Models.Vacation ToDB(Vacation vac)
         {
             return new DataLayer.Models.Vacation()

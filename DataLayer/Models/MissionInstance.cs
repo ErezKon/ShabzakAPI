@@ -8,6 +8,10 @@ using System.Threading.Tasks;
 
 namespace DataLayer.Models
 {
+    /// <summary>
+    /// Database entity representing a specific time-slot instance of a mission.
+    /// Each instance has a FromTime/ToTime window and tracks whether it is fully staffed.
+    /// </summary>
     public class MissionInstance
     {
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

@@ -8,6 +8,10 @@ using System.Threading.Tasks;
 
 namespace DataLayer.Models
 {
+    /// <summary>
+    /// Database entity representing a mission (duty) definition.
+    /// All text fields (Name, Description, FromTime, ToTime) are AES-encrypted at rest.
+    /// </summary>
     public class Mission
     {
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -42,6 +46,9 @@ namespace DataLayer.Models
         public virtual ICollection<MissionInstance> MissionInstances { get; set; }
         public virtual ICollection<MissionPositions> MissionPositions { get; set; }
 
+        /// <summary>
+        /// Creates a shallow copy of this mission, including cloned collections.
+        /// </summary>
         public Mission Clone()
         {
             var ret = new Mission();
@@ -61,6 +68,10 @@ namespace DataLayer.Models
             return ret;
         }
 
+        /// <summary>
+        /// Returns a clone with empty MissionInstances and MissionPositions collections.
+        /// Used when nested data is not needed.
+        /// </summary>
         public Mission HideLists()
         {
             var ret = this.Clone();

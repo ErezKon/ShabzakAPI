@@ -8,6 +8,11 @@ using System.Threading.Tasks;
 
 namespace DataLayer.Models
 {
+    /// <summary>
+    /// Database entity representing a soldier. All PII fields (Name, PersonalNumber, Phone,
+    /// Position, Platoon, Company) are AES-encrypted at rest.
+    /// Position is stored as a comma-separated string of numeric enum values.
+    /// </summary>
     public class Soldier
     {
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

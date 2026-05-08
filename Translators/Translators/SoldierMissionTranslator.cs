@@ -8,8 +8,15 @@ using Translators.Extensions;
 
 namespace Translators.Translators
 {
+    /// <summary>
+    /// Translates SoldierMission (assignment) entities between DataLayer DB models and BL models.
+    /// Links soldiers to mission instances with position assignments.
+    /// </summary>
     public abstract class SoldierMissionTranslator
     {
+        /// <summary>
+        /// Converts a BL SoldierMission model to a DB entity.
+        /// </summary>
         public static DataLayer.Models.SoldierMission ToDB(SoldierMission sol)
         {
             return new DataLayer.Models.SoldierMission
@@ -21,6 +28,11 @@ namespace Translators.Translators
             };
         }
 
+        /// <summary>
+        /// Converts a DB SoldierMission entity to a BL model.
+        /// Optionally includes nested soldier and mission instance data.
+        /// Decrypts soldier PII during translation.
+        /// </summary>
         public static SoldierMission ToBL(DataLayer.Models.SoldierMission sol, bool includeSoldier = true, bool includeMissionInstance = true)
         {
             Soldier soldier = null;
@@ -46,6 +58,10 @@ namespace Translators.Translators
             };
         }
 
+        /// <summary>
+        /// Converts a DB SoldierMission entity to a BL model using custom fetcher functions.
+        /// Allows cache-based lookups instead of DB navigation for better performance.
+        /// </summary>
         public static SoldierMission ToBL(DataLayer.Models.SoldierMission sol, Func<int, Soldier>? soldierFetcher, Func<int, MissionPosition>? missionPositonFetcher, Func<int, MissionInstance>? missionInstanceFetcher)
         {
             return new SoldierMission

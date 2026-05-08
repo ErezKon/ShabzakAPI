@@ -13,6 +13,9 @@ using static System.Net.WebRequestMethods;
 
 namespace _04.ShabzakAPI.Controllers
 {
+    /// <summary>
+    /// Controller for soldier management: CRUD operations, vacation handling, cache management, and soldier summaries.
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     public class SoldiersController : ControllerBase
@@ -26,6 +29,11 @@ namespace _04.ShabzakAPI.Controllers
             //soldierService.LoadSoldiersFromFile(@"/Shabzak/ShabzakAPI/DataLayer/soldiers.txt");
         }
 
+        /// <summary>
+        /// Development utility: loads soldiers from a tab-delimited file and missions from a JSON file into the database.
+        /// WARNING: This is a dev/seed endpoint and should not be used in production.
+        /// </summary>
+        /// <returns>null (side-effect only).</returns>
         [HttpGet("LoadCSV")]
         public List<Soldier> LoadCSV()
         {
@@ -111,6 +119,10 @@ namespace _04.ShabzakAPI.Controllers
             return null;
         }
 
+        /// <summary>
+        /// Forces an immediate reload of the soldiers cache from the database.
+        /// </summary>
+        /// <returns>Confirmation message.</returns>
         [HttpGet("ReloadCache")]
         public string ReloadCache()
         {
@@ -118,6 +130,12 @@ namespace _04.ShabzakAPI.Controllers
             return "Soldiers cache reloaded.";
         }
 
+        /// <summary>
+        /// Retrieves all soldiers from the cache. Optionally forces a cache reload before returning.
+        /// Soldier PII fields are decrypted before being returned.
+        /// </summary>
+        /// <param name="reloadCache">If true, reloads the cache from DB before returning.</param>
+        /// <returns>List of all soldiers with their positions, missions, and vacations.</returns>
         [HttpGet("GetSoldiers")]
         public List<Soldier> GetSoldiers(bool reloadCache = false)
         {
@@ -125,6 +143,12 @@ namespace _04.ShabzakAPI.Controllers
             return soldiers;
         }
 
+        /// <summary>
+        /// Updates a soldier's details (name, phone, position, platoon, company).
+        /// PII fields are encrypted before saving to the database.
+        /// </summary>
+        /// <param name="soldier">The updated soldier data.</param>
+        /// <returns>The updated soldier with decrypted fields.</returns>
         [HttpPost("UpdateSoldier")]
         public Soldier UpdateSoldier(Soldier soldier)
         {
@@ -132,6 +156,12 @@ namespace _04.ShabzakAPI.Controllers
             return ret;
         }
 
+        /// <summary>
+        /// Creates a new soldier. Automatically normalizes positions (adds 'Simple' position
+        /// for non-commanding soldiers if missing). PII is encrypted before storage.
+        /// </summary>
+        /// <param name="soldier">The soldier to create.</param>
+        /// <returns>The created soldier with generated ID and decrypted fields.</returns>
         [HttpPost("AddSoldier")]
         public Soldier AddSoldier(Soldier soldier)
         {
@@ -139,6 +169,11 @@ namespace _04.ShabzakAPI.Controllers
             return ret;
         }
 
+        /// <summary>
+        /// Deletes a soldier and all their associated assignments (cascade delete).
+        /// </summary>
+        /// <param name="soldierId">The ID of the soldier to delete.</param>
+        /// <returns>The deleted soldier's ID.</returns>
         [HttpPost("DeleteSoldier")]
         public int DeleteSoldier(int soldierId)
         {
@@ -146,6 +181,12 @@ namespace _04.ShabzakAPI.Controllers
             return soldierId;
         }
 
+        /// <summary>
+        /// Creates a vacation request for a soldier with Pending status.
+        /// Pending/approved vacations block the soldier from auto-assignment during that period.
+        /// </summary>
+        /// <param name="request">Soldier ID, from date, and to date.</param>
+        /// <returns>The created vacation request.</returns>
         [HttpPost("RequestVacation")]
         public Vacation RequestVacation(RequestVacationModel request)
         {
@@ -153,6 +194,12 @@ namespace _04.ShabzakAPI.Controllers
             return ret;
         }
 
+        /// <summary>
+        /// Approves or denies a pending vacation request.
+        /// Denied vacations are ignored by the auto-assignment algorithm.
+        /// </summary>
+        /// <param name="response">Vacation ID and the approval/denial response.</param>
+        /// <returns>The updated vacation record.</returns>
         [HttpPost("RespondToVacationRequest")]
         public Vacation RespondToVacationRequest(RespondToVacationRequestModel response)
         {
@@ -160,6 +207,11 @@ namespace _04.ShabzakAPI.Controllers
             return ret;
         }
 
+        /// <summary>
+        /// Retrieves vacations with optional filtering by soldier ID and/or status.
+        /// </summary>
+        /// <param name="filter">Optional soldier ID and vacation status filters.</param>
+        /// <returns>Filtered list of vacation records.</returns>
         [HttpPost("GetVacations")]
         public List<Vacation> GetVacations(GetVacationsFilterModel filter)
         {
@@ -167,6 +219,12 @@ namespace _04.ShabzakAPI.Controllers
             return ret;
         }
 
+        /// <summary>
+        /// Retrieves a soldier's assignment summary: total missions, total hours,
+        /// and a breakdown of assignments per mission name.
+        /// </summary>
+        /// <param name="soldierId">The soldier's ID.</param>
+        /// <returns>Summary with totals and per-mission breakdown.</returns>
         [HttpPost("GetSummary")]
         public SoldierSummary GetSummary(int soldierId)
         {

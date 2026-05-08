@@ -3,6 +3,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace DataLayer.Models
 {
+    /// <summary>
+    /// Database entity representing an application user.
+    /// Password is SHA-512 hashed with a per-user salt. Role determines access level.
+    /// Optionally linked to a Soldier record via SoldierId.
+    /// </summary>
     public class User
     {
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

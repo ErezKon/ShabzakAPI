@@ -8,6 +8,10 @@ using System.Threading.Tasks;
 
 namespace DataLayer.Models
 {
+    /// <summary>
+    /// Database entity storing metadata for an auto-assignment run.
+    /// Records the GUID, date range, and JSON-serialized soldier/mission IDs used.
+    /// </summary>
     public class AutoAssignmentsMeta
     {
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

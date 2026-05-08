@@ -7,6 +7,10 @@ using Translators.Encryption;
 
 namespace Translators.Extensions
 {
+    /// <summary>
+    /// Low-level encryption/decryption extension methods for DB Mission entities.
+    /// Handles Name, Description, FromTime, and ToTime fields.
+    /// </summary>
     public static class MissionExtension
     {
         private static readonly string naEncrypted;
@@ -18,6 +22,10 @@ namespace Translators.Extensions
             naEncrypted = encryptor.Encrypt("N/A");
         }
 
+        /// <summary>
+        /// Encrypts PII fields (Name, Description, FromTime, ToTime) on a DB mission entity.
+        /// Null/empty fields are replaced with encrypted "N/A".
+        /// </summary>
         public static DataLayer.Models.Mission Encrypt(this DataLayer.Models.Mission mission)
         {
             mission.Name = encryptor.Encrypt(mission.Name);
@@ -26,6 +34,9 @@ namespace Translators.Extensions
             mission.ToTime = string.IsNullOrWhiteSpace(mission.ToTime) ? naEncrypted : encryptor.Encrypt(mission.ToTime);
             return mission;
         }
+        /// <summary>
+        /// Decrypts PII fields (Name, Description, FromTime, ToTime) on a DB mission entity.
+        /// </summary>
         public static DataLayer.Models.Mission Decrypt(this DataLayer.Models.Mission mission)
         {
             mission.Name = encryptor.Decrypt(mission.Name);

@@ -9,6 +9,10 @@ using Translators.Translators;
 
 namespace BL.Extensions
 {
+    /// <summary>
+    /// Extension methods for encrypting/decrypting, translating, and querying Soldier entities.
+    /// Handles AES-256 encryption of PII fields (Name, Phone, PersonalNumber, Platoon, Company).
+    /// </summary>
     public static class SoldierExtension
     {
         private static readonly string naEncrypted;
@@ -20,6 +24,9 @@ namespace BL.Extensions
             naEncrypted = encryptor.Encrypt("N/A");
         }
 
+        /// <summary>
+        /// Encrypts PII fields on a DB soldier entity using AES-256.
+        /// </summary>
         public static DataLayer.Models.Soldier Encrypt(this DataLayer.Models.Soldier soldier)
         {
             var ret = Translators.Extensions.SoldierExtension.Encrypt(soldier);
@@ -27,6 +34,10 @@ namespace BL.Extensions
         }
 
 
+        /// <summary>
+        /// Encrypts PII fields on a BL soldier model using AES-256.
+        /// Null/empty fields are replaced with encrypted "N/A".
+        /// </summary>
         public static Soldier Encrypt(this Soldier soldier)
         {
             if (string.IsNullOrEmpty(soldier.Name))
@@ -74,12 +85,18 @@ namespace BL.Extensions
 
 
 
+        /// <summary>
+        /// Decrypts PII fields on a DB soldier entity using AES-256.
+        /// </summary>
         public static DataLayer.Models.Soldier Decrypt(this DataLayer.Models.Soldier soldier)
         {
             var ret = Translators.Extensions.SoldierExtension.Decrypt(soldier);
             return ret;
         }
 
+        /// <summary>
+        /// Decrypts PII fields on a BL soldier model using AES-256.
+        /// </summary>
         public static Soldier Decrypt(this Soldier soldier)
         {
             if(soldier != null)
@@ -93,19 +110,35 @@ namespace BL.Extensions
             return soldier;
         }
 
+        /// <summary>
+        /// Translates a DB soldier entity to a BL model with optional missions and vacations.
+        /// </summary>
         public static Soldier ToBL(this DataLayer.Models.Soldier soldier, bool includeMissions = true, bool includeVacations = true) => SoldierTranslator.ToBL(soldier, includeMissions, includeVacations);
+        /// <summary>
+        /// Translates a BL soldier model to a DB entity.
+        /// </summary>
         public static DataLayer.Models.Soldier ToDB(this Soldier soldier) => SoldierTranslator.ToDB(soldier);
 
+        /// <summary>
+        /// Checks if the soldier holds any commanding position.
+        /// </summary>
         public static bool IsCommander(this Soldier soldier)
         {
             return soldier.Positions.Any(p => p.IsCommandingPosition());
         }
 
+        /// <summary>
+        /// Checks if the soldier holds any officer position.
+        /// </summary>
         public static bool IsOfficer(this Soldier soldier)
         {
             return soldier.Positions.Any(p => p.IsOfficerPosition());
         }
 
+        /// <summary>
+        /// Parses the comma-separated position string from a DB soldier entity
+        /// into a list of Position enums.
+        /// </summary>
         public static List<DataLayer.Models.Position> GetSoldierPositions(this DataLayer.Models.Soldier soldier)
         {
             return soldier.Position.Split(",", StringSplitOptions.RemoveEmptyEntries)

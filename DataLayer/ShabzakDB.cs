@@ -9,13 +9,25 @@ using System.Threading.Tasks;
 
 namespace DataLayer
 {
+    /// <summary>
+    /// Primary EF Core DbContext for the Shabzak application.
+    /// Connects to Azure SQL Server and defines all entity configurations,
+    /// relationships, cascading deletes, and required properties.
+    /// </summary>
     public class ShabzakDB: DbContext
     {
+        /// <summary>
+        /// Parameterless constructor used by EF Core tooling and DI.
+        /// </summary>
         public ShabzakDB()
         {
             
         }
 
+        /// <summary>
+        /// Configures the Azure SQL Server connection with retry-on-failure (5 retries, 10s delay)
+        /// and sensitive data logging. Falls back to hardcoded connection string if not already configured.
+        /// </summary>
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -30,6 +42,10 @@ namespace DataLayer
             optionsBuilder.EnableSensitiveDataLogging();
         }
 
+        /// <summary>
+        /// Configures all entity relationships, keys, required properties, default values,
+        /// and cascade delete behaviors using the Fluent API.
+        /// </summary>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Soldier>(entity =>

@@ -10,6 +10,11 @@ using Translators.Models;
 
 namespace BL.Services
 {
+    /// <summary>
+    /// Core business logic service for mission management.
+    /// Handles CRUD operations, soldier assignment/unassignment, availability computation,
+    /// and replacement candidate ranking.
+    /// </summary>
     public class MissionService
     {
         private readonly SoldiersCache _soldiersCache;
@@ -17,6 +22,11 @@ namespace BL.Services
         {
             _soldiersCache = soldiersCache;
         }
+        /// <summary>
+        /// Retrieves all missions with their instances, assigned soldiers, and position requirements.
+        /// Data is loaded from DB, translated to BL models, and decrypted.
+        /// </summary>
+        /// <returns>List of all missions with full nested data.</returns>
         public List<Mission> GetMissions()
         {
             using var db = new DataLayer.ShabzakDB();
@@ -33,6 +43,15 @@ namespace BL.Services
             return ret;
         }
 
+        /// <summary>
+        /// Retrieves a raw DB mission entity by ID with optional eager loading of instances and positions.
+        /// </summary>
+        /// <param name="db">The DbContext to query.</param>
+        /// <param name="missionId">The mission ID.</param>
+        /// <param name="includeInstances">Whether to include mission instances and their soldiers.</param>
+        /// <param name="includePositions">Whether to include mission position requirements.</param>
+        /// <returns>The DB mission entity.</returns>
+        /// <exception cref="ArgumentException">Thrown if the mission is not found.</exception>
         public DataLayer.Models.Mission GetDBMissionById(DataLayer.ShabzakDB db, int missionId, bool includeInstances = true, bool includePositions = true)
         {
             var query = db.Missions.AsQueryable();
@@ -47,8 +66,17 @@ namespace BL.Services
             var mission = query.FirstOrDefault(m => m.Id == missionId) ?? throw new ArgumentException("Mission not found.");
             return mission;
         }
+        /// <summary>
+        /// Creates a new mission from a BL model. Converts to DB model and delegates to the DB overload.
+        /// </summary>
         public Mission AddMission(Mission mission) => AddMission(mission.ToDB());
 
+        /// <summary>
+        /// Creates a new mission in the database. Encrypts data, generates instances
+        /// (for special missions: single instance from start + duration), saves, and reloads cache.
+        /// </summary>
+        /// <param name="mission">The DB mission entity to create.</param>
+        /// <returns>The created mission as a BL model.</returns>
         public Mission AddMission(DataLayer.Models.Mission mission)
         {
             Logger.Log($"Adding Mission:\n {JsonConvert.SerializeObject(mission, Formatting.Indented)}");
@@ -88,8 +116,17 @@ namespace BL.Services
             }
         }
 
+        /// <summary>
+        /// Updates an existing mission from a BL model. Converts to DB model and delegates.
+        /// </summary>
         public Mission UpdateMission(Mission mission) => UpdateMission(mission.ToDB());
 
+        /// <summary>
+        /// Updates an existing mission in the database. Replaces instances and positions,
+        /// preserving existing soldier assignments where possible. Reloads cache after save.
+        /// </summary>
+        /// <param name="mission">The updated DB mission entity.</param>
+        /// <returns>The updated mission as a BL model.</returns>
         public Mission UpdateMission(DataLayer.Models.Mission mission)
         {
             Logger.Log($"Updating Mission:\n {JsonConvert.SerializeObject(mission, Formatting.Indented)}");
@@ -137,6 +174,12 @@ namespace BL.Services
             }
         }
 
+        /// <summary>
+        /// Deletes a mission and all related data (instances, positions, assignments) via cascade delete.
+        /// Reloads the missions cache after deletion.
+        /// </summary>
+        /// <param name="missionId">The ID of the mission to delete.</param>
+        /// <returns>The deleted mission's ID.</returns>
         public int DeleteMission(int missionId)
         {
             Logger.Log($"Deleting Mission {missionId}");
@@ -157,6 +200,14 @@ namespace BL.Services
             }
         }
 
+        /// <summary>
+        /// Assigns soldiers to a specific mission instance. Adds SoldierMission records
+        /// and updates the instance's IsFilled flag based on total positions required.
+        /// </summary>
+        /// <param name="missionId">The mission ID.</param>
+        /// <param name="missionInstanceId">The instance to assign to.</param>
+        /// <param name="soldiers">The soldier-position assignments to create.</param>
+        /// <returns>The updated mission with new assignments.</returns>
         public Mission AssignSoldiersToMission(int missionId, int missionInstanceId, IEnumerable<DataLayer.Models.SoldierMission> soldiers)
         {
             var db = new DataLayer.ShabzakDB();
@@ -174,6 +225,14 @@ namespace BL.Services
             return GetDBMissionById(db, missionId).ToBL();
         }
 
+        /// <summary>
+        /// Removes a soldier's assignment from a mission instance.
+        /// Updates the instance's IsFilled flag after removal.
+        /// </summary>
+        /// <param name="missionId">The mission ID.</param>
+        /// <param name="missionInstanceId">The instance to remove from.</param>
+        /// <param name="soldierId">The soldier to unassign.</param>
+        /// <returns>The updated mission.</returns>
         public Mission UnassignSoldiersToMission(int missionId, int missionInstanceId, int soldierId)
         {
             var db = new DataLayer.ShabzakDB();
@@ -188,6 +247,14 @@ namespace BL.Services
             return GetDBMissionById(db, missionId).ToBL();
         }
 
+        /// <summary>
+        /// Computes soldier availability for a specific mission instance.
+        /// For each soldier: calculates rest-time-before/after, checks for overlapping assignments/vacations,
+        /// and determines if the soldier is already assigned. Results sorted by best availability.
+        /// </summary>
+        /// <param name="missionInstanceId">The mission instance to check availability for.</param>
+        /// <param name="soldiersPool">Optional: restrict to specific soldier IDs. Null = all active soldiers.</param>
+        /// <returns>List of soldiers with availability metrics, sorted by rest time descending.</returns>
         public List<GetAvailableSoldiersModel> GetAvailableSoldiers(int missionInstanceId, List<int>? soldiersPool = null)
         {
             var ret = new List<GetAvailableSoldiersModel>();
@@ -274,6 +341,11 @@ namespace BL.Services
                 .ToList();
         }
 
+        /// <summary>
+        /// Retrieves all time-slot instances for a specific mission, including assigned soldiers.
+        /// </summary>
+        /// <param name="missionId">The mission ID.</param>
+        /// <returns>List of mission instances with soldier assignments.</returns>
         public List<MissionInstance> GetMissionInstances(int missionId)
         {
             using var db = new DataLayer.ShabzakDB();
@@ -286,6 +358,12 @@ namespace BL.Services
             return instances;
         }
 
+        /// <summary>
+        /// Syncs soldier assignments for a mission instance. Compares provided list with existing
+        /// assignments: adds new ones, removes ones no longer present. Updates IsFilled flag.
+        /// All soldiers must target the same instance.
+        /// </summary>
+        /// <param name="soldiers">The desired soldier-mission assignments for one instance.</param>
         public void AssignSoldiersToMissionInstance(List<SoldierMission> soldiers)
         {
             if (soldiers == null || soldiers.Count == 0)
@@ -336,6 +414,16 @@ namespace BL.Services
             db.SaveChanges();
         }
 
+        /// <summary>
+        /// Retrieves mission instances within a date range. When fullDay is true,
+        /// the range is expanded to cover entire days (midnight to midnight).
+        /// Can optionally filter to only unfilled instances.
+        /// </summary>
+        /// <param name="from">Start of the date range.</param>
+        /// <param name="to">End of the date range.</param>
+        /// <param name="fullDay">If true, expand range to full days.</param>
+        /// <param name="unassignedOnly">If true, only return instances where IsFilled is false.</param>
+        /// <returns>Filtered list of mission instances.</returns>
         public List<MissionInstance> GetMissionInstancesInRange(DateTime from, DateTime to, bool fullDay = true, bool unassignedOnly = true)
         {
             using var db = new DataLayer.ShabzakDB();
@@ -367,6 +455,14 @@ namespace BL.Services
                 endTime2.IsBetweenDates(startTime1, endTime1);
         }
 
+        /// <summary>
+        /// Computes ranked replacement candidates for a soldier in a mission instance.
+        /// Scoring: position match (exact/similar), rest-time availability (staircase),
+        /// and fairness (assignment count vs average). Includes overlap detection for swap candidates.
+        /// </summary>
+        /// <param name="missionInstanceId">The instance where the replacement is needed.</param>
+        /// <param name="excludeSoldierId">The soldier being replaced (excluded from candidates).</param>
+        /// <returns>Ranked list of replacement candidates with scores, breakdowns, and overlap info.</returns>
         public List<ReplacementCandidateModel> GetReplacementCandidates(int missionInstanceId, int excludeSoldierId)
         {
             var ret = new List<ReplacementCandidateModel>();
@@ -553,6 +649,17 @@ namespace BL.Services
             return 0.2;
         }
 
+        /// <summary>
+        /// Replaces a soldier in a mission instance. In swap mode, the old and new soldiers
+        /// exchange their assignments across two instances. In non-swap mode, the old soldier
+        /// is simply removed and the new one is assigned to the same position.
+        /// </summary>
+        /// <param name="missionInstanceId">The instance where the replacement happens.</param>
+        /// <param name="oldSoldierId">The soldier being replaced.</param>
+        /// <param name="newSoldierId">The replacement soldier.</param>
+        /// <param name="swap">If true, performs a two-way swap between instances.</param>
+        /// <param name="swapMissionInstanceId">The second instance for the swap (required when swap=true).</param>
+        /// <returns>All missions with updated assignments.</returns>
         public List<Mission> ReplaceSoldierInMissionInstance(int missionInstanceId, int oldSoldierId, int newSoldierId, bool swap, int? swapMissionInstanceId)
         {
             using var db = new DataLayer.ShabzakDB();

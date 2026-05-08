@@ -8,11 +8,22 @@ using System.Threading.Tasks;
 
 namespace DataLayer
 {
+    /// <summary>
+    /// Secondary EF Core DbContext connecting to an on-premises/remote SQL Server instance.
+    /// Mirrors the primary ShabzakDB schema but targets a different database endpoint.
+    /// </summary>
     public class RemoteDB : DbContext
     {
+        /// <summary>
+        /// Parameterless constructor used by EF Core tooling and DI.
+        /// </summary>
         public RemoteDB()
         {
         }
+        /// <summary>
+        /// Configures the remote SQL Server connection with retry-on-failure (5 retries, 10s delay).
+        /// Falls back to hardcoded connection string if not already configured.
+        /// </summary>
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
@@ -25,6 +36,10 @@ namespace DataLayer
             }
         }
 
+        /// <summary>
+        /// Configures all entity relationships, keys, required properties, default values,
+        /// and cascade delete behaviors using the Fluent API (mirrors ShabzakDB configuration).
+        /// </summary>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Soldier>(entity =>

@@ -8,6 +8,10 @@ using System.Threading.Tasks;
 
 namespace DataLayer.Models
 {
+    /// <summary>
+    /// Database entity representing a soldier's vacation/leave request.
+    /// Tracks date range and approval status. Linked to a Soldier via SoldierId.
+    /// </summary>
     public class Vacation
     {
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

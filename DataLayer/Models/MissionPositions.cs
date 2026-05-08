@@ -8,6 +8,10 @@ using System.Threading.Tasks;
 
 namespace DataLayer.Models
 {
+    /// <summary>
+    /// Database entity representing how many soldiers of a specific position are required for a mission.
+    /// Links a Mission to a Position enum value with a required count.
+    /// </summary>
     public class MissionPositions
     {
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

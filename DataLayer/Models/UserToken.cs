@@ -8,6 +8,10 @@ using System.Threading.Tasks;
 
 namespace DataLayer.Models
 {
+    /// <summary>
+    /// Database entity representing an authentication token issued to a user.
+    /// Includes expiration time and optional extra metadata.
+    /// </summary>
     public class UserToken
     {
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

@@ -10,16 +10,32 @@ using System.Threading.Tasks;
 
 namespace BL.Services
 {
+    /// <summary>
+    /// Service for computing assignment statistics and fairness metadata.
+    /// Provides aggregated data for charts: assignments per soldier, hours per soldier, and per-mission breakdowns.
+    /// Supports filtering by soldier type (All, NonCommanders, CommandersOnly, OfficersOnly).
+    /// </summary>
     public class MetadataService
     {
         private readonly SoldiersCache _soldiersCache;
         private readonly MissionsCache _missionsCache;
-        public MetadataService(SoldiersCache soldiersCache, MissionsCache missionsCache) 
+        /// <summary>
+        /// Initializes the metadata service with required caches.
+        /// </summary>
+        public MetadataService(SoldiersCache soldiersCache, MissionsCache missionsCache)
         { 
             _soldiersCache = soldiersCache;
             _missionsCache = missionsCache;
         }
 
+        /// <summary>
+        /// Counts the total assignments per soldier within a date range.
+        /// Filters soldiers by type and only counts instances that fall within the range.
+        /// </summary>
+        /// <param name="from">Start of the date range.</param>
+        /// <param name="to">End of the date range.</param>
+        /// <param name="type">Filter: All, NonCommanders, CommandersOnly, or OfficersOnly.</param>
+        /// <returns>List of soldier-assignment-count pairs.</returns>
         public List<AssignmentsPerSoldier> GetAssignmentsPerSoldiers(DateTime? from, DateTime to, SoldierMetadataType? type = SoldierMetadataType.All)
         {
             var ret = new List<AssignmentsPerSoldier>();
@@ -60,6 +76,14 @@ namespace BL.Services
             }
             return ret;
         }
+        /// <summary>
+        /// Calculates total duty hours per soldier within a date range.
+        /// Uses ActualHours from mission if defined, otherwise computes from instance duration.
+        /// </summary>
+        /// <param name="from">Start of the date range.</param>
+        /// <param name="to">End of the date range.</param>
+        /// <param name="type">Filter: All, NonCommanders, CommandersOnly, or OfficersOnly.</param>
+        /// <returns>List of soldier-hours pairs.</returns>
         public List<HoursPerSoldier> GetHoursPerSoldiers(DateTime? from, DateTime to, SoldierMetadataType? type = SoldierMetadataType.All)
         {
             var ret = new List<HoursPerSoldier>();
@@ -125,6 +149,14 @@ namespace BL.Services
             return ret;
         }
 
+        /// <summary>
+        /// Computes a per-mission assignment breakdown for each soldier within a date range.
+        /// Returns how many times each soldier was assigned to each specific mission.
+        /// </summary>
+        /// <param name="from">Start of the date range.</param>
+        /// <param name="to">End of the date range.</param>
+        /// <param name="type">Filter: All, NonCommanders, CommandersOnly, or OfficersOnly.</param>
+        /// <returns>List of breakdown models with per-soldier per-mission assignment counts.</returns>
         public List<AssignmentsBreakdown> GetAssignmentsBreakdownPerSoldiers(DateTime? from, DateTime to, SoldierMetadataType? type = SoldierMetadataType.All)
         {
             var ret = new List<AssignmentsBreakdown>();

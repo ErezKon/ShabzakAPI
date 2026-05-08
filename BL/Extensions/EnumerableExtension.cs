@@ -6,10 +6,20 @@ using System.Threading.Tasks;
 
 namespace BL.Extensions
 {
+    /// <summary>
+    /// Extension methods for IEnumerable collections.
+    /// </summary>
     public static class EnumerableExtension
     {
         private static Random rng = new();
 
+        /// <summary>
+        /// Randomly shuffles an enumerable using the Fisher-Yates algorithm.
+        /// Used by the auto-assign engine to randomize candidate order.
+        /// </summary>
+        /// <typeparam name="T">Element type.</typeparam>
+        /// <param name="enumerable">The collection to shuffle.</param>
+        /// <returns>A new shuffled list.</returns>
         public static IEnumerable<T> Shuffle<T>(this IEnumerable<T> enumerable)
         {
             var list = enumerable.ToList();

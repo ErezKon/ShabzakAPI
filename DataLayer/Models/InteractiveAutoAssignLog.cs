@@ -3,6 +3,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DataLayer.Models
 {
+    /// <summary>
+    /// Database entity logging actions during an interactive auto-assign session.
+    /// Records session ID, target mission instance, action type, and optional picks JSON.
+    /// </summary>
     public class InteractiveAutoAssignLog
     {
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

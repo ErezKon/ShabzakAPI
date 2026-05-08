@@ -9,6 +9,11 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Translators.Encryption
 {
+    /// <summary>
+    /// AES-256 symmetric encryption service using Rijndael algorithm.
+    /// Caches encryption/decryption results in thread-safe dictionaries for performance.
+    /// Used to encrypt/decrypt all PII data at rest.
+    /// </summary>
     public class AESEncryptor
     {
         public static readonly string GenKey = "g1rmNZsVU5+maAU/nVhWg89t9qSNAU3jPqCnLDT1TDk=";
@@ -16,6 +21,12 @@ namespace Translators.Encryption
 
         private static readonly Dictionary<string, string> decryptionDic = [];
         private static readonly Dictionary<string, string> encryptionDic = [];
+        /// <summary>
+        /// Encrypts a plaintext string using AES-256. Returns a Base64-encoded ciphertext.
+        /// Results are cached for repeated lookups.
+        /// </summary>
+        /// <param name="plainText">The plaintext to encrypt.</param>
+        /// <returns>Base64-encoded encrypted string.</returns>
         public string Encrypt(string plainText)
         {
             lock (encryptionDic)
@@ -55,6 +66,13 @@ namespace Translators.Encryption
             return enc;
         }
 
+        /// <summary>
+        /// Decrypts a Base64-encoded ciphertext string back to plaintext using AES-256.
+        /// Results are cached for repeated lookups.
+        /// </summary>
+        /// <param name="cipherText">The Base64-encoded ciphertext to decrypt.</param>
+        /// <returns>The decrypted plaintext string.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if cipherText is null or whitespace.</exception>
         public string Decrypt(string cipherText)
         {
             // Check arguments. 
@@ -100,10 +118,16 @@ namespace Translators.Encryption
             return plaintext;
         }
 
+        /// <summary>
+        /// Converts a byte array to a Base64 string.
+        /// </summary>
         public static string ByteArrayToString(byte[] arr)
         {
             return Convert.ToBase64String(arr);
         }
+        /// <summary>
+        /// Converts a Base64 string to a byte array.
+        /// </summary>
         public static byte[] StringToByteArray(string s)
         {
             return Convert.FromBase64String(s);

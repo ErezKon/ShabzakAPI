@@ -7,8 +7,17 @@ using Translators.Models;
 
 namespace Translators.Translators
 {
+    /// <summary>
+    /// Translates MissionInstance entities between DataLayer DB models and BL models.
+    /// Formats DateTime to/from "dd/MM/yyyy HH:mm" string representation.
+    /// </summary>
     public abstract class MissionInstanceTranslator
     {
+        /// <summary>
+        /// Converts a DB MissionInstance to a BL model with formatted date strings.
+        /// Optionally includes nested soldier and mission data.
+        /// </summary>
+        /// <returns>The translated BL mission instance, or null if input is null.</returns>
         public static MissionInstance ToBL(DataLayer.Models.MissionInstance missionInstance, bool includeMissionInstance = true, bool includeSoldier = true)
         {
             if(missionInstance == null)
@@ -30,6 +39,10 @@ namespace Translators.Translators
                 SoldierMissions = soldierMissions
             };
         }
+        /// <summary>
+        /// Converts a BL MissionInstance to a DB entity, parsing date strings back to DateTime.
+        /// </summary>
+        /// <returns>The translated DB mission instance, or null if input is null.</returns>
         public static DataLayer.Models.MissionInstance ToDB(MissionInstance missionInstance)
         {
             if (missionInstance == null)

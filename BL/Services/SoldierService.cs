@@ -13,17 +13,34 @@ using VacationRequestStatus = DataLayer.Models.VacationRequestStatus;
 
 namespace BL.Services
 {
+    /// <summary>
+    /// Business logic service for soldier management.
+    /// Handles CRUD operations, vacation requests, position normalization, and soldier summaries.
+    /// </summary>
     public class SoldierService
     {
         private readonly PositionHelper positionHelper = new();
         public SoldierService()
         {
         }
+
+        /// <summary>
+        /// Creates a new soldier. Normalizes positions (ensures non-commanding soldiers have 'Simple'),
+        /// encrypts PII, saves to DB, and updates the cache.
+        /// </summary>
+        /// <param name="soldier">The soldier to create (BL model).</param>
+        /// <returns>The created soldier with generated ID and decrypted fields.</returns>
         public Soldier AddSoldier(Soldier soldier)
         {
             return AddSoldier(soldier.ToDB());
         }
 
+        /// <summary>
+        /// Creates a new soldier. Normalizes positions (ensures non-commanding soldiers have 'Simple'),
+        /// encrypts PII, saves to DB, and updates the cache.
+        /// </summary>
+        /// <param name="soldier">The soldier to create (DB model).</param>
+        /// <returns>The created soldier with generated ID and decrypted fields.</returns>
         public Soldier AddSoldier(DataLayer.Models.Soldier soldier)
         {
             Logger.Log($"Adding Soldier:\n {JsonConvert.SerializeObject(soldier, Formatting.Indented)}");
@@ -43,36 +60,20 @@ namespace BL.Services
             }
         }
 
-        private void NormalizePositions(DataLayer.Models.Soldier soldier)
-        {
-            var positions = soldier.GetSoldierPositions();
-            var positionAdded = false;
-            var commandingPositions = positionHelper.CommandingPositions;
-            if(commandingPositions.Any(cp => positions.Contains(cp)))
-            {
-                return;
-            }
-            if (!positions.Any(p => p == DataLayer.Models.Position.Simple))
-            {
-                foreach (var position in positions)
-                {
-                    if (positionHelper.SimplePositions.Contains(position))
-                    {
-                        positions.Add(DataLayer.Models.Position.Simple);
-                        positionAdded = true;
-                        break;
-                    }
-                }
-                if (positionAdded)
-                {
-                    soldier.Position = string.Join(",", positions
-                        .Order()
-                        .Select(p => ((int)p).ToString())
-                        .ToArray());
-                }
-            }
-        }
+        /// <summary>
+        /// Updates an existing soldier's details. Normalizes positions, encrypts PII,
+        /// saves to DB, and updates the cache.
+        /// </summary>
+        /// <param name="soldier">The updated soldier data (BL model).</param>
+        /// <returns>The updated soldier with decrypted fields.</returns>
         public Soldier Update(Soldier soldier) => Update(soldier.ToDB());
+
+        /// <summary>
+        /// Updates an existing soldier's details. Normalizes positions, encrypts PII,
+        /// saves to DB, and updates the cache.
+        /// </summary>
+        /// <param name="soldier">The updated soldier data (DB model).</param>
+        /// <returns>The updated soldier with decrypted fields.</returns>
         public Soldier Update(DataLayer.Models.Soldier soldier)
         {
             Logger.Log($"Updating Soldier:\n {JsonConvert.SerializeObject(soldier, Formatting.Indented)}");
@@ -96,11 +97,16 @@ namespace BL.Services
             }
             catch (Exception ex)
             {
-                Logger.Log($"Error while adding soldier:\n{ex}");
+                Logger.Log($"Error while updating soldier:\n{ex}");
                 throw;
             }
         }
 
+        /// <summary>
+        /// Deletes a soldier and all associated data (assignments, vacations) via cascade delete.
+        /// Reloads the soldiers cache after deletion.
+        /// </summary>
+        /// <param name="id">The ID of the soldier to delete.</param>
         public void DeleteSoldier(int id)
         {
             try
@@ -122,6 +128,12 @@ namespace BL.Services
             }
         }
 
+        /// <summary>
+        /// Loads soldiers from a tab-delimited text file into the database.
+        /// Format: Name\tPersonalNumber\tPhone\tPosition (per line). Encrypts PII before saving.
+        /// Used for initial data seeding only.
+        /// </summary>
+        /// <param name="filePath">Path to the soldiers text file.</param>
         public void LoadSoldiersFromFile(string filePath)
         {
             var lines = File.ReadAllLines(filePath).Skip(1);
@@ -149,6 +161,14 @@ namespace BL.Services
             db.SaveChanges();
         }
 
+        /// <summary>
+        /// Creates a vacation request for a soldier with Pending status.
+        /// Pending and approved vacations block auto-assignment during that period.
+        /// </summary>
+        /// <param name="soldierId">The soldier's ID.</param>
+        /// <param name="from">Vacation start date.</param>
+        /// <param name="to">Vacation end date.</param>
+        /// <returns>The created vacation record.</returns>
         public Vacation RequestVacation(int soldierId, DateTime from, DateTime to)
         {
             if (from >= to)
@@ -169,6 +189,12 @@ namespace BL.Services
             return VacationTranslator.ToBL(vacation);
         }
 
+        /// <summary>
+        /// Approves or denies a pending vacation request.
+        /// </summary>
+        /// <param name="vacationId">The vacation request ID.</param>
+        /// <param name="response">The approval status (Approved or Denied).</param>
+        /// <returns>The updated vacation record.</returns>
         public Vacation RespondToVacationRequest(int vacationId, VacationRequestStatus response)
         {
             using var db = new ShabzakDB();
@@ -179,6 +205,12 @@ namespace BL.Services
             return VacationTranslator.ToBL(vacation);
         }
 
+        /// <summary>
+        /// Retrieves vacations with optional filtering by soldier and/or status.
+        /// </summary>
+        /// <param name="soldierId">Optional: filter by soldier ID.</param>
+        /// <param name="status">Optional: filter by vacation status (Pending/Approved/Denied).</param>
+        /// <returns>List of matching vacation records.</returns>
         public List<Vacation> GetVacations(int? soldierId, VacationRequestStatus? status)
         {
             using var db = new ShabzakDB();
@@ -202,6 +234,12 @@ namespace BL.Services
             return ret;
         }
 
+        /// <summary>
+        /// Computes a soldier's assignment summary: total distinct missions, total hours worked,
+        /// and a per-mission breakdown with count and hours.
+        /// </summary>
+        /// <param name="soldierId">The soldier's ID.</param>
+        /// <returns>Summary containing totals and per-mission breakdown.</returns>
         public SoldierSummary GetSummary(int soldierId)
         {
             using var db = new ShabzakDB();
