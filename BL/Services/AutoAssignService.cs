@@ -59,7 +59,7 @@ namespace BL.Services
             SoldiersCache.ReloadCache();
             MissionsCache.ReloadCache();
 
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
 
             ReloadCache();
 
@@ -85,7 +85,7 @@ namespace BL.Services
             // Goal: Promote a candidate schedule from temporary storage (SoldierMissionCandidates)
             // into actual assignments (SoldierMission), then clean up all candidates.
 
-            using var db = new ShabzakDB();
+            using var db = DbFactory.Create();
 
             // Step 1: Load all candidate records and filter to the accepted schedule by GUID.
             var allCandidates = db.SoldierMissionCandidates.ToList();
@@ -135,7 +135,7 @@ namespace BL.Services
             // Goal: Refresh all in-memory lookup structures from the database so the
             // auto-assign algorithm works with the latest assignment state.
 
-            using var db = new ShabzakDB();
+            using var db = DbFactory.Create();
 
             // Build a two-level lookup: MissionId → SoldierId → [SoldierMission]
             // Used to quickly find how many times a soldier has been assigned to a specific mission.
@@ -710,7 +710,7 @@ namespace BL.Services
 
             // Step 4: Persist all assignments as SoldierMissionCandidate records under a single GUID.
             // These are temporary until the user accepts one schedule.
-            using var db = new ShabzakDB();
+            using var db = DbFactory.Create();
             var candidateId = Guid.NewGuid().ToString();
             ret.Id = candidateId;
             db.SoldierMissionCandidates.AddRange(scheduleAssignments
@@ -1251,7 +1251,7 @@ namespace BL.Services
         //public bool IsInstanceFilled(MissionInstance instance)
         //{
         //    var totalPositions = instance.Mission.MissionPositions.Sum(mp => mp.Count);
-        //    using var db = new DataLayer.ShabzakDB();
+        //    using var db = DataLayer.DbFactory.Create();
         //    var totalAssignments = db.SoldierMission
         //        .Count(sm => sm.MissionInstanceId == instance.Id);
         //    instance.IsFilled = totalPositions == totalAssignments;
@@ -1263,7 +1263,7 @@ namespace BL.Services
         /// </summary>
         public List<string> GetAllCandidates()
         {
-            using var db = new ShabzakDB();
+            using var db = DbFactory.Create();
             var candidates = db.SoldierMissionCandidates
                 .Select(sm => sm.CandidateId)
                 .Distinct()
@@ -1295,7 +1295,7 @@ namespace BL.Services
         /// </summary>
         public void RemoveSoldierFromMissionInstance(int soldierId, int missionInstanceId)
         {
-            using var db = new ShabzakDB();
+            using var db = DbFactory.Create();
             var instance = db.MissionInstances
                 .Include(mi => mi.Mission)
                 .First(mi => mi.Id == missionInstanceId);
@@ -2097,7 +2097,7 @@ namespace BL.Services
             // Failures are swallowed to avoid crashing the session over a logging issue.
             try
             {
-                using var db = new ShabzakDB();
+                using var db = DbFactory.Create();
                 db.InteractiveAutoAssignLogs.Add(new InteractiveAutoAssignLog
                 {
                     SessionId = sessionId,

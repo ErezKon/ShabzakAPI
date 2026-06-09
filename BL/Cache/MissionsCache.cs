@@ -46,7 +46,7 @@ namespace BL.Cache
         /// </summary>
         public static void ReloadCache()
         {
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
             DbMissions = db.Missions
                 .Include(m => m.MissionPositions)
                 .Include(m => m.MissionInstances)

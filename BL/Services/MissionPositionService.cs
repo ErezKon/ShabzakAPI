@@ -14,7 +14,7 @@ namespace BL.Services
     {
         public List<MissionPosition> GetMissionPositions()
         {
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
             var ret = db.MissionPositions
                 .ToList()
                 .Select(m => m.ToBL())
@@ -28,7 +28,7 @@ namespace BL.Services
             Logger.Log($"Adding MissionPosition:\n {JsonConvert.SerializeObject(missionInstance, Formatting.Indented)}");
             try
             {
-                using var db = new DataLayer.ShabzakDB();
+                using var db = DataLayer.DbFactory.Create();
                 db.MissionPositions.Add(missionInstance);
                 db.SaveChanges();
                 return missionInstance.ToBL();
@@ -47,7 +47,7 @@ namespace BL.Services
             Logger.Log($"Updating MissionPosition:\n {JsonConvert.SerializeObject(missionInstance, Formatting.Indented)}");
             try
             {
-                using var db = new DataLayer.ShabzakDB();
+                using var db = DataLayer.DbFactory.Create();
                 var dbModel = db.MissionPositions
                     .FirstOrDefault(m => m.Id == missionInstance.Id) ?? throw new ArgumentException("MissionPosition not found.");
                 dbModel.MissionId = missionInstance.Id;
@@ -68,7 +68,7 @@ namespace BL.Services
             Logger.Log($"Deleting MissionPosition {missionInstanceId}");
             try
             {
-                using var db = new DataLayer.ShabzakDB();
+                using var db = DataLayer.DbFactory.Create();
                 var missionInstance = db.MissionPositions
                     .FirstOrDefault(m => m.Id == missionInstanceId) ?? throw new ArgumentException("MissionPosition not found.");
                 Logger.Log($"Found MissionPosition:\n {JsonConvert.SerializeObject(missionInstance, Formatting.Indented)}");

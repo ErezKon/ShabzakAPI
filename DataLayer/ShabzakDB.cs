@@ -32,8 +32,10 @@ namespace DataLayer
         {
             if (!optionsBuilder.IsConfigured)
             {
+                //Data Source=(localdb)\ProjectModels;Initial Catalog=master;Integrated Security=True;Connect Timeout=30;Encrypt=False;Trust Server Certificate=False;Application Intent=ReadWrite;Multi Subnet Failover=False
                 //var connectionString = @"Data Source=10.55.136.14;Initial Catalog=ShabzakDB;User Id=sa;Password=P@ssw0rd;Trust Server Certificate=True;Encrypt=False";
                 var connectionString = @"Server=tcp:shabzakdb.database.windows.net,1433;Initial Catalog=ShabzakDB;Persist Security Info=False;User ID=erez;Password=Q1w2E3r4;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=120;";
+                //var connectionString = @"Data Source=(localdb)\ProjectModels;Initial Catalog=ShabzakDB;Integrated Security=True;Connect Timeout=120;Encrypt=False;Trust Server Certificate=False;Application Intent=ReadWrite;Multi Subnet Failover=False";
                 optionsBuilder.UseSqlServer(connectionString, builder => { 
                     builder.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
                 });

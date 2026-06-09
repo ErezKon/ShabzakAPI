@@ -55,7 +55,7 @@ namespace BL.Cache
         /// </summary>
         public void ReloadCache()
         {
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
 
             //var users = db.Users
             //    .Where(u => u.Id != 39)
@@ -95,7 +95,7 @@ namespace BL.Cache
                 {
                     return usersDic[username];
                 }
-                var db = new DataLayer.ShabzakDB();
+                var db = DataLayer.DbFactory.Create();
                 var user = db.Users
                     .FirstOrDefault(u => u.Name.Equals(username));
                 if(user != null)

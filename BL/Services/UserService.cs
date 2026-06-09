@@ -49,7 +49,7 @@ namespace BL.Services
                 SoldierId = soldierId
             };
             user.Salt = Guid.NewGuid().ToString();
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
             user.Password = Sha512Encryptor.Encrypt($"{password}{user.Salt}");
             var dbUser = user.ToDB();//.Encrypt();
             db.Users.Add(dbUser);

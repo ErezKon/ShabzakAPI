@@ -34,7 +34,7 @@ namespace BL.Extensions
         public static bool IsInstanceFilled(this DataLayer.Models.MissionInstance instance)
         {
             var totalPositions = instance.Mission.MissionPositions.Sum(mp => mp.Count);
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
             var totalAssignments = db.SoldierMission
                 .Count(sm => sm.MissionInstanceId == instance.Id);
             instance.IsFilled = totalPositions == totalAssignments;

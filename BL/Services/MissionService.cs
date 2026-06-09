@@ -29,7 +29,7 @@ namespace BL.Services
         /// <returns>List of all missions with full nested data.</returns>
         public List<Mission> GetMissions()
         {
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
             var temp = db.Missions
                 .Include(m => m.MissionInstances)
                 .Include("MissionInstances.Soldiers")
@@ -82,7 +82,7 @@ namespace BL.Services
             Logger.Log($"Adding Mission:\n {JsonConvert.SerializeObject(mission, Formatting.Indented)}");
             try
             {
-                using var db = new DataLayer.ShabzakDB();
+                using var db = DataLayer.DbFactory.Create();
                 var instances = mission.MissionInstances.ToList();
                 mission.MissionInstances = [];
                 if(mission.IsSpecial)
@@ -132,7 +132,7 @@ namespace BL.Services
             Logger.Log($"Updating Mission:\n {JsonConvert.SerializeObject(mission, Formatting.Indented)}");
             try
             {
-                using var db = new DataLayer.ShabzakDB();
+                using var db = DataLayer.DbFactory.Create();
                 var dbModel = (db.Missions
                     .Include(m => m.MissionInstances)
                     .Include(m => m.MissionPositions)
@@ -185,7 +185,7 @@ namespace BL.Services
             Logger.Log($"Deleting Mission {missionId}");
             try
             {
-                using var db = new DataLayer.ShabzakDB();
+                using var db = DataLayer.DbFactory.Create();
                 var mission = GetDBMissionById(db, missionId);
                 Logger.Log($"Found Mission:\n {JsonConvert.SerializeObject(mission.Clone().HideLists().Decrypt(), Formatting.Indented)}");
                 db.Missions.Remove(mission);
@@ -210,7 +210,7 @@ namespace BL.Services
         /// <returns>The updated mission with new assignments.</returns>
         public Mission AssignSoldiersToMission(int missionId, int missionInstanceId, IEnumerable<DataLayer.Models.SoldierMission> soldiers)
         {
-            var db = new DataLayer.ShabzakDB();
+            var db = DataLayer.DbFactory.Create();
             var mission = GetDBMissionById(db, missionId);
             var instance = db.MissionInstances
                 .Include(m => m.Soldiers)
@@ -235,7 +235,7 @@ namespace BL.Services
         /// <returns>The updated mission.</returns>
         public Mission UnassignSoldiersToMission(int missionId, int missionInstanceId, int soldierId)
         {
-            var db = new DataLayer.ShabzakDB();
+            var db = DataLayer.DbFactory.Create();
             var mission = GetDBMissionById(db, missionId);
             var instance = mission?.MissionInstances
                 ?.FirstOrDefault(i => i.Id == missionInstanceId) ?? throw new ArgumentException("Mission Instance not found.");
@@ -258,7 +258,7 @@ namespace BL.Services
         public List<GetAvailableSoldiersModel> GetAvailableSoldiers(int missionInstanceId, List<int>? soldiersPool = null)
         {
             var ret = new List<GetAvailableSoldiersModel>();
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
 
             var missionInstance = db.MissionInstances
                 .Include(mi => mi.Mission)
@@ -348,7 +348,7 @@ namespace BL.Services
         /// <returns>List of mission instances with soldier assignments.</returns>
         public List<MissionInstance> GetMissionInstances(int missionId)
         {
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
             var instances = db.MissionInstances
                 .Where(mi => mi.MissionId == missionId)
                 .ToList()
@@ -385,7 +385,7 @@ namespace BL.Services
                     MissionPositionId = s.MissionPosition.Id,
                 })
                 .ToList();
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
             var existingAssignments = db.SoldierMission
                 .Where(mi => mi.MissionInstanceId == missionInstance)
                 .ToList();
@@ -426,7 +426,7 @@ namespace BL.Services
         /// <returns>Filtered list of mission instances.</returns>
         public List<MissionInstance> GetMissionInstancesInRange(DateTime from, DateTime to, bool fullDay = true, bool unassignedOnly = true)
         {
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
             if(fullDay)
             {
                 from = from.Date;
@@ -466,7 +466,7 @@ namespace BL.Services
         public List<ReplacementCandidateModel> GetReplacementCandidates(int missionInstanceId, int excludeSoldierId)
         {
             var ret = new List<ReplacementCandidateModel>();
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
 
             var missionInstance = db.MissionInstances
                 .Include(mi => mi.Mission)
@@ -662,7 +662,7 @@ namespace BL.Services
         /// <returns>All missions with updated assignments.</returns>
         public List<Mission> ReplaceSoldierInMissionInstance(int missionInstanceId, int oldSoldierId, int newSoldierId, bool swap, int? swapMissionInstanceId)
         {
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
 
             var oldAssignment = db.SoldierMission
                 .FirstOrDefault(sm => sm.SoldierId == oldSoldierId && sm.MissionInstanceId == missionInstanceId)

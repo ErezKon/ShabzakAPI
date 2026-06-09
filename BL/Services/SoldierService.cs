@@ -47,7 +47,7 @@ namespace BL.Services
             try
             {
                 NormalizePositions(soldier);
-                using var db = new DataLayer.ShabzakDB();
+                using var db = DataLayer.DbFactory.Create();
                 db.Soldiers.Add(soldier.Encrypt());
                 db.SaveChanges();
                 SoldiersCache.ReloadAsync();
@@ -79,7 +79,7 @@ namespace BL.Services
             Logger.Log($"Updating Soldier:\n {JsonConvert.SerializeObject(soldier, Formatting.Indented)}");
             try
             {
-                using var db = new DataLayer.ShabzakDB();
+                using var db = DataLayer.DbFactory.Create();
                 var sol = db.Soldiers
                     .FirstOrDefault(s => s.Id == soldier.Id)
                     ?? throw new ArgumentException("Soldier not found.");
@@ -111,7 +111,7 @@ namespace BL.Services
         {
             try
             {
-                using var db = new DataLayer.ShabzakDB();
+                using var db = DataLayer.DbFactory.Create();
                 var soldier = db.Soldiers.FirstOrDefault(s => s.Id == id);
                 if(soldier == null)
                 {
@@ -156,7 +156,7 @@ namespace BL.Services
                     return ret;
                 })
                 .ToList();
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
             db.Soldiers.AddRange(data);
             db.SaveChanges();
         }
@@ -183,7 +183,7 @@ namespace BL.Services
                 Approved = VacationRequestStatus.Pending
             };
             vacation.Soldier = null;
-            using var db = new ShabzakDB();
+            using var db = DbFactory.Create();
             db.Vacations.Add(vacation);
             db.SaveChanges();
             return VacationTranslator.ToBL(vacation);
@@ -197,7 +197,7 @@ namespace BL.Services
         /// <returns>The updated vacation record.</returns>
         public Vacation RespondToVacationRequest(int vacationId, VacationRequestStatus response)
         {
-            using var db = new ShabzakDB();
+            using var db = DbFactory.Create();
             var vacation = db.Vacations.FirstOrDefault(vac => vac.Id == vacationId)
                 ?? throw new ArgumentNullException($"Vacation ID {vacationId} not found.");
             vacation.Approved = response;
@@ -213,7 +213,7 @@ namespace BL.Services
         /// <returns>List of matching vacation records.</returns>
         public List<Vacation> GetVacations(int? soldierId, VacationRequestStatus? status)
         {
-            using var db = new ShabzakDB();
+            using var db = DbFactory.Create();
             var vacations = db.Vacations
                 .AsQueryable();
 
@@ -242,7 +242,7 @@ namespace BL.Services
         /// <returns>Summary containing totals and per-mission breakdown.</returns>
         public SoldierSummary GetSummary(int soldierId)
         {
-            using var db = new ShabzakDB();
+            using var db = DbFactory.Create();
             var data = db.SoldierMission
                 .Include(sm => sm.MissionInstance)
                 .ThenInclude(mi => mi.Mission)

@@ -72,6 +72,8 @@ ShabzakAPI/
 │   └── Extensions/         (Encrypt/Decrypt for DataLayer models)
 └── DataLayer/              # EF Core data access
     ├── ShabzakDB.cs        (DbContext — SQL Server, connection string, Fluent API config)
+    ├── LocalDB.cs          (DbContext — SQLite, inherits ShabzakDB, for local/offline dev)
+    ├── DbFactory.cs        (Static factory: DbFactory.Create() returns ShabzakDB or LocalDB)
     ├── RemoteDB.cs         (secondary DB context — currently unused/commented out)
     ├── Models/             (EF entity classes)
     │   ├── Soldier.cs
@@ -100,7 +102,7 @@ Controllers  →  BL Services  →  DataLayer (EF Core DbContext)
                  (Encrypt/Decrypt)
 ```
 
-- **DataLayer** — EF Core entities stored encrypted (PII fields). Connection to Azure SQL.
+- **DataLayer** — EF Core entities stored encrypted (PII fields). Connection to Azure SQL (or SQLite via `DbFactory.UseLocal`).
 - **Translators** — Bidirectional mappers (`ToBL` / `ToDB`). Also houses `AESEncryptor` and `Sha512Encryptor`.
 - **BL** — Business logic services, caching (singleton pattern with periodic reload), scoring algorithms.
 - **04.ShabzakAPI** — ASP.NET Core controllers, request/response view models, `Program.cs` startup.
@@ -162,7 +164,15 @@ Controllers  →  BL Services  →  DataLayer (EF Core DbContext)
 - **Password Hashing:** `Sha512Encryptor.Encrypt(password + salt)` — SHA-512 with per-user salt.
 - **Login:** Username = SHA-512(personalNumber), Password = SHA-512(phone). Salted again on storage.
 
-### 2.5 Caching System
+### 2.5 Database Factory Pattern
+
+All database context instantiation goes through `DataLayer.DbFactory.Create()` instead of `new ShabzakDB()`. This enables runtime switching between SQL Server and SQLite:
+
+- **`DbFactory.UseLocal`** — Static bool (default `false`). Set to `true` to use SQLite (`LocalDB`).
+- **`DbFactory.Create()`** — Returns `new LocalDB()` if `UseLocal` is true, otherwise `new ShabzakDB()`.
+- **`LocalDB`** — Inherits `ShabzakDB`, overrides `OnConfiguring` to use SQLite (`shabzak_local.db`).
+
+### 2.6 Caching System
 
 Three singleton caches, each auto-reloading from DB every 5 minutes:
 - **`SoldiersCache`** — Holds both `DataLayer.Models.Soldier` and `Translators.Models.Soldier` dictionaries. Decrypts on load.
@@ -171,7 +181,7 @@ Three singleton caches, each auto-reloading from DB every 5 minutes:
 
 Cache invalidation: Services call `SoldiersCache.ReloadAsync()` or `MissionsCache.ReloadAsync()` after mutations.
 
-### 2.6 API Endpoints
+### 2.7 API Endpoints
 
 #### MissionController (`api/Mission/`)
 
@@ -228,7 +238,7 @@ Cache invalidation: Services call `SoldiersCache.ReloadAsync()` or `MissionsCach
 | POST | `GetHoursPerSoldiers` | Get total hours per soldier in date range |
 | POST | `GetAssignmentsBreakdownPerSoldiers` | Get per-mission assignment breakdown per soldier |
 
-### 2.7 Auto-Assignment Algorithm (AutoAssignService)
+### 2.8 Auto-Assignment Algorithm (AutoAssignService)
 
 This is the most complex part of the system (~1700 lines). Two modes:
 
@@ -264,7 +274,7 @@ This is the most complex part of the system (~1700 lines). Two modes:
 - Scores candidates with position-match, rest-time, and fairness factors.
 - Supports direct replacement or swap (old soldier takes new soldier's slot in another instance).
 
-### 2.8 BL Models (Key)
+### 2.9 BL Models (Key)
 
 | Model | Purpose |
 |-------|---------|
@@ -311,6 +321,8 @@ This is the most complex part of the system (~1700 lines). Two modes:
 | `BL/Cache/MissionsCache.cs` | Mission in-memory cache |
 | `BL/Cache/UsersCache.cs` | User in-memory cache |
 | `DataLayer/ShabzakDB.cs` | EF Core DbContext + Fluent API config |
+| `DataLayer/LocalDB.cs` | SQLite DbContext for local/offline dev |
+| `DataLayer/DbFactory.cs` | Static factory for DB context creation |
 | `Translators/Encryption/AESEncryptor.cs` | AES encrypt/decrypt for PII |
 | `Translators/Encryption/Sha512Encryptor.cs` | SHA-512 hashing for passwords |
 | `Translators/Translators/SoldierTranslator.cs` | Soldier DB↔BL mapping |
@@ -328,4 +340,5 @@ This is the most complex part of the system (~1700 lines). Two modes:
 - ✅ All Translators (MissionTranslator, SoldierTranslator, MissionInstanceTranslator, MissionPositionTranslator, SoldierMissionTranslator, UserTranslator, UserTokenTranslator, VacationTranslator)
 - ✅ All Encryption (AESEncryptor, Sha512Encryptor)
 - ✅ All DataLayer Models (Mission, MissionInstance, MissionPositions, Position, Soldier, SoldierMission, SoldierMissionCandidate, User, UserRole, UserToken, Vacation, VacationRequestStatus, AutoAssignmentsMeta, InteractiveAutoAssignLog)
-- ✅ All DbContext (ShabzakDB, RemoteDB)
+- ✅ All DbContext (ShabzakDB, LocalDB, RemoteDB)
+- ✅ DbFactory

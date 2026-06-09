@@ -9,10 +9,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddDbContext<ShabzakDB>();
-var db = new ShabzakDB();
-db.Database.EnsureCreated();
-db.SaveChanges();
-db.Dispose();
+using (var db = DbFactory.Create())
+{
+    db.Database.EnsureCreated();
+    db.SaveChanges();
+}
 //builder.Services.AddDbContext<RemoteDB>();
 //var remotedb = new RemoteDB();
 //remotedb.Database.EnsureCreated();

@@ -123,7 +123,7 @@ namespace BL
                 }
             }
 
-            using (var db = new DataLayer.ShabzakDB())
+            using (var db = DataLayer.DbFactory.Create())
             {
 
                 foreach (var soldier in ret)

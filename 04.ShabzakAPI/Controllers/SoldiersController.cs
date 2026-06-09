@@ -84,7 +84,7 @@ namespace _04.ShabzakAPI.Controllers
             //var soldiers = csvLoader.ParseSoldiersToDB(csvPath);
             //return null;
 
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
            // using var remote = new DataLayer.RemoteDB();
 
             var missionsJson = System.IO.File.ReadAllText(@"C:\Users\Erez_Konforti\OneDrive - Dell Technologies\Documents\Shabzak data\missions-detailed.json");

@@ -40,7 +40,7 @@ namespace ShabzakAPI.Controllers
         [HttpPost("ResetPassword")]
         public string ResetPassword(ResetPasswordVM model)
         {
-            using var db = new ShabzakDB();
+            using var db = DbFactory.Create();
             var encUsername = model.Encrypted ? model.Username : Sha512Encryptor.Encrypt(model.Username);
             var cache = UsersCache.GetInstance();
             var user = cache.GetUser(encUsername);

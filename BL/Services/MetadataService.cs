@@ -39,7 +39,7 @@ namespace BL.Services
         public List<AssignmentsPerSoldier> GetAssignmentsPerSoldiers(DateTime? from, DateTime to, SoldierMetadataType? type = SoldierMetadataType.All)
         {
             var ret = new List<AssignmentsPerSoldier>();
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
             DateTime absoluteFrom;
             if(!db.MissionInstances.Any())
             {
@@ -87,7 +87,7 @@ namespace BL.Services
         public List<HoursPerSoldier> GetHoursPerSoldiers(DateTime? from, DateTime to, SoldierMetadataType? type = SoldierMetadataType.All)
         {
             var ret = new List<HoursPerSoldier>();
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
             DateTime absoluteFrom;
             if (!db.MissionInstances.Any())
             {
@@ -160,7 +160,7 @@ namespace BL.Services
         public List<AssignmentsBreakdown> GetAssignmentsBreakdownPerSoldiers(DateTime? from, DateTime to, SoldierMetadataType? type = SoldierMetadataType.All)
         {
             var ret = new List<AssignmentsBreakdown>();
-            using var db = new DataLayer.ShabzakDB();
+            using var db = DataLayer.DbFactory.Create();
             DateTime absoluteFrom;
             if (!db.MissionInstances.Any())
             {
