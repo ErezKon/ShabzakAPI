@@ -53,7 +53,9 @@ namespace BL.Services
                 absoluteFrom = from.Value;
             }
             var countPerSoldier = db.SoldierMission
-                .Where(sm => sm.MissionInstance.FromTime >= absoluteFrom && sm.MissionInstance.ToTime <= to.AddDays(10))
+                .Where(sm => sm.MissionInstance.FromTime >= absoluteFrom && sm.MissionInstance.ToTime <= // FIX: AddDays(10) was an arbitrary buffer that included assignments
+                // 10 days past the requested range. Using AddDays(1) for end-of-day inclusivity.
+                to.AddDays(1))
                 .GroupBy(sm => sm.SoldierId)
                 .ToDictionary(k => k.Key, v => v.Count());
 
@@ -104,7 +106,9 @@ namespace BL.Services
             var countPerSoldier = db.SoldierMission
                 .Include(sm => sm.MissionInstance)
                 .Include(sm => sm.MissionInstance.Mission)
-                .Where(sm => sm.MissionInstance.FromTime >= absoluteFrom && sm.MissionInstance.ToTime <= to.AddDays(10))
+                .Where(sm => sm.MissionInstance.FromTime >= absoluteFrom && sm.MissionInstance.ToTime <= // FIX: AddDays(10) was an arbitrary buffer that included assignments
+                // 10 days past the requested range. Using AddDays(1) for end-of-day inclusivity.
+                to.AddDays(1))
                 .GroupBy(sm => sm.SoldierId)
                 .ToDictionary(k => k.Key, v => v
                     .Select(sm => new
@@ -176,7 +180,9 @@ namespace BL.Services
             }
             var countPerSoldier = db.SoldierMission
                 .Include(sm => sm.MissionInstance)
-                .Where(sm => sm.MissionInstance.FromTime >= absoluteFrom && sm.MissionInstance.ToTime <= to.AddDays(10))
+                .Where(sm => sm.MissionInstance.FromTime >= absoluteFrom && sm.MissionInstance.ToTime <= // FIX: AddDays(10) was an arbitrary buffer that included assignments
+                // 10 days past the requested range. Using AddDays(1) for end-of-day inclusivity.
+                to.AddDays(1))
                 .GroupBy(sm => sm.SoldierId)
                 .ToDictionary(k => k.Key, v => v
                     .Select(kv => new

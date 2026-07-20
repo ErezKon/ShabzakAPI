@@ -15,7 +15,7 @@ COPY ["DataLayer/01.DataLayer.csproj", "DataLayer/"]
 COPY ["Translators/02.Translators.csproj", "Translators/"]
 RUN dotnet restore "./04.ShabzakAPI/04.ShabzakAPI.csproj"
 COPY . .
-WORKDIR "/src"]
+WORKDIR "/src"
 RUN dotnet build "/src/04.ShabzakAPI/04.ShabzakAPI.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
@@ -25,4 +25,9 @@ RUN dotnet publish "/src/04.ShabzakAPI/04.ShabzakAPI.csproj" -c $BUILD_CONFIGURA
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "04.ShabzakAPI.dll"]
+# Copy the entrypoint script that auto-generates Jwt__Key if not provided.
+COPY entrypoint.sh /app/entrypoint.sh
+USER root
+RUN chmod +x /app/entrypoint.sh
+USER app
+ENTRYPOINT ["/app/entrypoint.sh"]

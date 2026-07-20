@@ -18,6 +18,8 @@ namespace BL.Cache
     public class SoldiersCache
     {
         private static SoldiersCache Instance { get; set; }
+        private static readonly object _instanceLock = new();
+        private Timer? _reloadTimer; // FIX: Store timer reference to prevent GC collection.
         public static IEnumerable<Soldier> Soldiers
         {
             get
@@ -39,7 +41,9 @@ namespace BL.Cache
         private SoldiersCache() 
         {
             Logger.Log("Creating Soldier Cache");
-            var timer = new Timer(state =>
+            // FIX: Store timer in instance field — a local variable can be GC'd,
+            // silently stopping the periodic cache reload.
+            _reloadTimer = new Timer(state =>
             {
                 ReloadCache();
             }, null, TimeSpan.Zero, TimeSpan.FromMinutes(5));
@@ -79,15 +83,9 @@ namespace BL.Cache
         /// </summary>
         public static SoldiersCache GetInstance()
         {
-            lock(Soldiers)
+            lock(_instanceLock)
             {
-                if(Instance == null)
-                {
-                    lock (Soldiers)
-                    {
-                        Instance = new SoldiersCache();
-                    }
-                }
+                Instance ??= new SoldiersCache();
                 return Instance;
             }
         }

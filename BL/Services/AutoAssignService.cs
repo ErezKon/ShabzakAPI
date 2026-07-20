@@ -1279,6 +1279,12 @@ namespace BL.Services
         /// <exception cref="FileNotFoundException">Thrown if the candidate JSON file doesn't exist.</exception>
         public AssignmentValidationModel GetCandidate(string guid)
         {
+            // SECURITY: Validate the GUID to prevent path traversal attacks.
+            // An attacker could pass "../../etc/passwd" as guid to read arbitrary files.
+            if (!Guid.TryParse(guid, out _))
+            {
+                throw new ArgumentException("Invalid candidate identifier.");
+            }
             var path = Path.Combine(Directory.GetCurrentDirectory(), "AssignmentsResults", $"{guid}.json");
             if (!File.Exists(path))
             {

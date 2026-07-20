@@ -18,13 +18,16 @@ namespace BL.Cache
     public class MissionsCache
     {
         private static MissionsCache Instance { get; set; }
+        private static readonly object _instanceLock = new();
+        private Timer? _reloadTimer; // FIX: Store timer reference to prevent GC collection.
         public static IEnumerable<Mission> Missions { get; private set; } = new List<Mission>();
         public static IEnumerable<DataLayer.Models.Mission> DbMissions { get; private set; }
         private static Dictionary<int, Mission> missionDic = new();
         private MissionsCache()
         {
             Logger.Log("Creating Mission Cache");
-            var timer = new Timer(state =>
+            // FIX: Store timer in instance field — a local variable can be GC'd.
+            _reloadTimer = new Timer(state =>
             {
                 ReloadCache();
             }, null, TimeSpan.Zero, TimeSpan.FromMinutes(5));
@@ -71,15 +74,9 @@ namespace BL.Cache
         /// </summary>
         public static MissionsCache GetInstance()
         {
-            lock (Missions)
+            lock (_instanceLock)
             {
-                if (Instance == null)
-                {
-                    lock (Missions)
-                    {
-                        Instance = new MissionsCache();
-                    }
-                }
+                Instance ??= new MissionsCache();
                 return Instance;
             }
         }
@@ -113,16 +110,25 @@ namespace BL.Cache
         /// <param name="id">The mission ID.</param>
         /// <param name="includeInstances">If false, clears MissionInstances from the returned clone.</param>
         /// <returns>The cached mission or null.</returns>
-        public Mission GetMissionById(int id, bool includeInstances = true)
+        public Mission? GetMissionById(int id, bool includeInstances = true)
         {
             lock (missionDic)
             {
-                if (missionDic.ContainsKey(id))
+                if (missionDic.TryGetValue(id, out var mission))
                 {
-                    var mission = missionDic[id];
                     if(!includeInstances)
                     {
-                        mission.MissionInstances = [];
+                        return new Mission
+                        {
+                            Id = mission.Id,
+                            Name = mission.Name,
+                            SoldiersRequired = mission.SoldiersRequired,
+                            CommandersRequired = mission.CommandersRequired,
+                            Duration = mission.Duration,
+                            IsSpecial = mission.IsSpecial,
+                            MissionPositions = mission.MissionPositions,
+                            MissionInstances = [] 
+                        };
                     }
                     return mission;
                 }

@@ -2,6 +2,7 @@
 using BL.Extensions;
 using BL.Models;
 using BL.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ShabzakAPI.ViewModels;
@@ -15,6 +16,7 @@ namespace ShabzakAPI.Controllers
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class MissionController : ControllerBase
     {
         private readonly MissionService _missionService;

@@ -43,7 +43,9 @@ namespace BL.Services
         /// <returns>The created soldier with generated ID and decrypted fields.</returns>
         public Soldier AddSoldier(DataLayer.Models.Soldier soldier)
         {
-            Logger.Log($"Adding Soldier:\n {JsonConvert.SerializeObject(soldier, Formatting.Indented)}");
+            // SECURITY: Log only the soldier ID, not the full JSON — the original logged
+            // PII (name, phone, personal number) to the log file.
+            Logger.Log($"Adding Soldier (ID will be assigned after save)");
             try
             {
                 NormalizePositions(soldier);
@@ -76,7 +78,8 @@ namespace BL.Services
         /// <returns>The updated soldier with decrypted fields.</returns>
         public Soldier Update(DataLayer.Models.Soldier soldier)
         {
-            Logger.Log($"Updating Soldier:\n {JsonConvert.SerializeObject(soldier, Formatting.Indented)}");
+            // SECURITY: Log only the soldier ID, not the full JSON — prevents PII leakage.
+            Logger.Log($"Updating Soldier ID={soldier.Id}");
             try
             {
                 using var db = DataLayer.DbFactory.Create();
@@ -118,8 +121,10 @@ namespace BL.Services
                     throw new ArgumentException("Can't find soldier.");
                 }
                 db.Soldiers.Remove(soldier);
-                SoldiersCache.ReloadAsync();
+                // FIX: SaveChanges BEFORE ReloadAsync. The original reloaded the cache
+                // before committing the delete — the soldier was still in DB during reload.
                 db.SaveChanges();
+                SoldiersCache.ReloadAsync();
             }
             catch (Exception ex)
             {

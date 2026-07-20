@@ -20,12 +20,14 @@ namespace BL.Cache
     public class UsersCache
     {
         private static UsersCache Instance { get; set; }
-        private static Object mutex = new Object();
+        private static readonly object mutex = new();
+        private Timer? _reloadTimer; // FIX: Store timer reference to prevent GC collection.
         private Dictionary<string, DataLayer.Models.User> usersDic = [];
         private UsersCache()
         {
             Logger.Log("Creating Users Cache");
-            var timer = new Timer(state =>
+            // FIX: Store timer in instance field — a local variable can be GC'd.
+            _reloadTimer = new Timer(state =>
             {
                 ReloadCache();
             }, null, TimeSpan.Zero, TimeSpan.FromMinutes(5));
@@ -38,13 +40,7 @@ namespace BL.Cache
         {
             lock (mutex)
             {
-                if (Instance == null)
-                {
-                    lock (mutex)
-                    {
-                        Instance = new UsersCache();
-                    }
-                }
+                Instance ??= new UsersCache();
                 return Instance;
             }
         }
@@ -91,11 +87,11 @@ namespace BL.Cache
         {
             lock (usersDic)
             {
-                if (usersDic.ContainsKey(username))
+                if (usersDic.TryGetValue(username, out var cached))
                 {
-                    return usersDic[username];
+                    return cached;
                 }
-                var db = DataLayer.DbFactory.Create();
+                using var db = DataLayer.DbFactory.Create();
                 var user = db.Users
                     .FirstOrDefault(u => u.Name.Equals(username));
                 if(user != null)

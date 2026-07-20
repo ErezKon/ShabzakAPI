@@ -1,11 +1,11 @@
 ﻿using BL.Cache;
 using BL.Extensions;
+using BL.Logging;
 using DataLayer;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Translators.Encryption;
@@ -50,7 +50,9 @@ namespace BL.Services
             };
             user.Salt = Guid.NewGuid().ToString();
             using var db = DataLayer.DbFactory.Create();
-            user.Password = Sha512Encryptor.Encrypt($"{password}{user.Salt}");
+            // SECURITY: New accounts use PBKDF2-HMAC-SHA512 (100k iterations) instead
+            // of single-round SHA-512. The PBKDF2 hash is self-describing (embeds its own salt).
+            user.Password = Sha512Encryptor.HashWithPbkdf2(password);
             var dbUser = user.ToDB();//.Encrypt();
             db.Users.Add(dbUser);
             db.SaveChanges();
@@ -89,18 +91,44 @@ namespace BL.Services
                 throw new ArgumentNullException("Username or password cannot be null.");
             }
             var user = _usersCache.GetUser(username) ?? throw new ArgumentException("User not found.");
-            var encPass = Sha512Encryptor.Encrypt($"{password}{user.Salt}");
-            if (user.Password.Equals(encPass))
+            // SECURITY: Verify() auto-detects hash format (PBKDF2 vs legacy SHA-512)
+            // and uses constant-time comparison to prevent timing attacks.
+            if (!Sha512Encryptor.Verify(password, user.Password, user.Salt))
             {
-                var ret = user.ToBL().LoadSoldier();
-                ret.Password = "";
-                ret.Salt = "";
-                ret.Soldier.Missions = ret.Soldier?.Missions
-                    ?.Where(m => DateTime.Parse(m.MissionInstance.FromTime) > DateTime.Now)
-                    ?.ToList() ?? [];
-                return ret;
+                return null;
             }
-            return null;
+
+            // Transparent upgrade: if the user still has a legacy SHA-512 hash,
+            // re-hash with PBKDF2 now that we've confirmed the password is correct.
+            if (Sha512Encryptor.NeedsUpgrade(user.Password))
+            {
+                try
+                {
+                    var upgraded = Sha512Encryptor.HashWithPbkdf2(password);
+                    using var upgradeDb = DataLayer.DbFactory.Create();
+                    var dbUser = upgradeDb.Users.FirstOrDefault(u => u.Id == user.Id);
+                    if (dbUser != null)
+                    {
+                        dbUser.Password = upgraded;
+                        upgradeDb.SaveChanges();
+                        user.Password = upgraded; // update cache too
+                        Logger.Log($"Upgraded password hash to PBKDF2 for user ID={user.Id}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Non-fatal: login still succeeds, upgrade will retry next login.
+                    Logger.Log($"Failed to upgrade password hash for user ID={user.Id}: {ex.Message}", LogLevel.Warning);
+                }
+            }
+
+            var ret = user.ToBL().LoadSoldier();
+            ret.Password = "";
+            ret.Salt = "";
+            ret.Soldier.Missions = ret.Soldier?.Missions
+                ?.Where(m => DateTime.Parse(m.MissionInstance.FromTime) > DateTime.Now)
+                ?.ToList() ?? [];
+            return ret;
         }
     }
 }

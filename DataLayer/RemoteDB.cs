@@ -28,7 +28,10 @@ namespace DataLayer
         {
             if (!optionsBuilder.IsConfigured)
             {
-                var connectionString = @"Data Source=94.159.133.104,1434;User ID=sa;Password=P@ssw0rd;Initial Catalog=ShabzakDB;Trust Server Certificate=True;";
+                var connectionString = DbFactory.ConnectionString
+                    ?? throw new InvalidOperationException(
+                        "Database connection string not configured. " +
+                        "Set ConnectionStrings:ShabzakDB in appsettings.json or via environment variable.");
                 optionsBuilder.UseSqlServer(connectionString, builder => {
                     builder.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
                 });

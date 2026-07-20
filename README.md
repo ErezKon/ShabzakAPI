@@ -4,7 +4,7 @@
 
 `Shabzak` (Angular UI) is the companion frontend. `ShabzakSQL` (SQL Server) is the database. The three are orchestrated by the root `../docker-compose.yml`.
 
-> **Security notice:** This service currently has no server-side authentication/authorization and ships with hardcoded secrets. See [`CODE_ANALYSIS.md`](./CODE_ANALYSIS.md) before deploying anywhere reachable.
+> **Security refactored:** JWT Bearer authentication now protects all endpoints (except `/Login`). Secrets (DB connection string, AES key, JWT signing key) are read from `appsettings.json` / environment variables — see [Configuration](#configuration). CORS is restricted to configured origins, and Swagger is gated to Development only.
 
 ---
 
@@ -34,7 +34,8 @@
 | DB | Azure SQL Server (prod) / SQL Server container / local SQLite |
 | Serialization | Newtonsoft.Json |
 | API docs | Swashbuckle (Swagger) |
-| Crypto | AES-256 (Rijndael) for PII at rest, SHA-512 for password hashing |
+| Crypto | AES-256 (random IV, backward-compatible) for PII at rest, SHA-512 for password hashing |
+| Auth | JWT Bearer (`Microsoft.AspNetCore.Authentication.JwtBearer`) |
 
 The solution targets four class-library/web projects wired together via project references (`ShabzakAPI.sln`).
 
@@ -137,11 +138,10 @@ Core entities (`DataLayer/Models`). Fields marked * are AES-encrypted at rest.
 
 ## Encryption Strategy
 
-- **PII at rest** — `Soldier` PII and `Mission.Name` are AES-256 encrypted before writes and decrypted after reads, via `*.Encrypt()` / `*.Decrypt()` extension methods (`Translators/Encryption/AESEncryptor.cs`).
+- **PII at rest** — `Soldier` PII and `Mission.Name` are AES-256 encrypted before writes and decrypted after reads, via `*.Encrypt()` / `*.Decrypt()` extension methods (`Translators/Encryption/AESEncryptor.cs`). **New encryptions use a random IV prepended to the ciphertext** (`v2:` prefix). Decryption auto-detects the format for backward compatibility with existing data.
 - **Passwords** — hashed with `SHA-512(password + perUserSalt)` (`Sha512Encryptor`). Salt is a per-user GUID.
 - **Login credential derivation** — the account is seeded from a soldier: `Username = SHA-512(PersonalNumber)`, `Password = SHA-512(Phone)`. The frontend pre-hashes both with SHA-512 before sending.
-
-> See `CODE_ANALYSIS.md` for why the current AES configuration (static key + static IV) and single-round SHA-512 are not sufficient.
+- **AES key** — configured in `appsettings.json` under `Aes:Key` (and optionally `Aes:LegacyIV` for existing data). See [Configuration](#configuration).
 
 ## Caching
 
@@ -181,13 +181,43 @@ All routes are `api/[controller]/[action]`. Bodies are JSON; several actions tak
 ### `api/Metadata`
 `GetAssignmentsPerSoldiers` · `GetHoursPerSoldiers` · `GetAssignmentsBreakdownPerSoldiers`
 
-Swagger UI is exposed at `/swagger` (currently enabled in all environments).
+Swagger UI is exposed at `/swagger` (**Development environment only**).
+
+> All endpoints except `Login` require a valid JWT in the `Authorization: Bearer <token>` header.
 
 ## Configuration
 
-- **Connection string** — currently hardcoded in `DataLayer/ShabzakDB.cs::OnConfiguring` (should move to configuration/secret store — see analysis).
+All secrets are externalized to `appsettings.json` or environment variables. **Never commit real secrets to source control.**
+
+### `appsettings.json` keys
+
+| Key | Required | Description |
+|---|---|---|
+| `ConnectionStrings:ShabzakDB` | **Yes** | SQL Server connection string |
+| `Jwt:Key` | **Yes** | HMAC-SHA256 signing key (≥ 32 chars) |
+| `Jwt:Issuer` | No | Token issuer claim (default: `ShabzakAPI`) |
+| `Jwt:Audience` | No | Token audience claim (default: `ShabzakClient`) |
+| `Jwt:ExpiryMinutes` | No | Token lifetime in minutes (default: `480`) |
+| `Aes:Key` | **Yes** | AES-256 encryption key for PII at rest |
+| `Aes:LegacyIV` | No | Legacy static IV for decrypting pre-existing data |
+| `Cors:AllowedOrigins` | No | Comma-separated allowed origins (default: `http://localhost:5230`) |
+
+### Environment variable overrides
+
+ASP.NET Core supports `__` (double-underscore) notation for nested keys:
+
+```bash
+export ConnectionStrings__ShabzakDB="Server=...;User ID=sa;Password=...;Initial Catalog=ShabzakDB;"
+export Jwt__Key="YourAtLeast32CharacterLongSecretKeyHere!!"
+```
+
+The `docker-compose.yml` injects these from a `.env` file. Copy `.env.example` to `.env` and fill in real values.
+
+### Other settings
+
 - **Local DB toggle** — set `DataLayer.DbFactory.UseLocal = true` to use a local SQLite file (`shabzak_local.db`) instead of SQL Server.
-- **CORS** — `AllPolicy` in `Program.cs` currently allows any origin/method/header.
+- **CORS** — restricted to origins listed in `Cors:AllowedOrigins` (configurable).
+- **Swagger** — only available when `ASPNETCORE_ENVIRONMENT=Development`.
 - **Logs** — written to `Logs/<timestamp>.log` relative to the working directory (mounted to the host in `docker-compose.yml`).
 - **Auto-assign artifacts** — written to `AssignmentsResults/<guid>.json` relative to the working directory.
 
@@ -203,7 +233,7 @@ docker-compose up --build
 
 This starts `shabzak-api` (host port **5231** → container 8080), `shabzak-ui` (host **5230**), and `shabzak-sql` (host **1433**).
 
-> Note: the compose file currently uses absolute build contexts (`/Shabzak/ShabzakAPI`) and a hardcoded SA password; adjust for your environment.
+> Create a `.env` file at the repo root (copy from `.env.example`) with `MSSQL_SA_PASSWORD` and `JWT_KEY`.
 
 ### Run the API locally
 
@@ -216,9 +246,9 @@ dotnet build ShabzakAPI.sln -c Debug
 dotnet run --project 04.ShabzakAPI/04.ShabzakAPI.csproj
 ```
 
-On startup the app runs `Database.EnsureCreated()`, primes the three caches, then serves the API (Swagger at `/swagger`).
+On startup the app reads configuration, configures JWT + AES + DB, runs `Database.EnsureCreated()`, primes the three caches, then serves the API (Swagger at `/swagger` in Development only).
 
-To seed data, use `SoldierService.LoadSoldiersFromFile(...)` with `DataLayer/soldiers.txt` (adjust the path — the `LoadCSV` endpoint currently contains a machine-specific absolute path).
+To seed data in development, use the `GET api/Soldiers/LoadCSV` endpoint — it reads from `DataLayer/soldiers.txt` relative to the project directory. **This endpoint is blocked in production.**
 
 ## Conventions
 

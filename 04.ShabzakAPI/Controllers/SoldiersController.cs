@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Translators.Models;
 using System.IO;
@@ -18,6 +19,7 @@ namespace _04.ShabzakAPI.Controllers
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class SoldiersController : ControllerBase
     {
         private readonly SoldiersCache _soldiersCache;
@@ -35,9 +37,15 @@ namespace _04.ShabzakAPI.Controllers
         /// </summary>
         /// <returns>null (side-effect only).</returns>
         [HttpGet("LoadCSV")]
-        public List<Soldier> LoadCSV()
+        public IActionResult LoadCSV([FromServices] IWebHostEnvironment env)
         {
-            _soldierService.LoadSoldiersFromFile(@"C:\Users\Erez_Konforti\OneDrive - Dell Technologies\Documents\repos\Shabzak\ShabzakAPI\DataLayer\soldiers.txt");
+            // SECURITY: Dev-only seed endpoint. Blocked in production.
+            if (!env.IsDevelopment())
+            {
+                return NotFound();
+            }
+            var soldiersPath = Path.Combine(env.ContentRootPath, "..", "DataLayer", "soldiers.txt");
+            _soldierService.LoadSoldiersFromFile(soldiersPath);
             //var path = @"C:\Parse\1.txt";
             //var solDic = System.IO.File.ReadAllLines(path)
             //    .Select(s =>
@@ -87,7 +95,8 @@ namespace _04.ShabzakAPI.Controllers
             using var db = DataLayer.DbFactory.Create();
            // using var remote = new DataLayer.RemoteDB();
 
-            var missionsJson = System.IO.File.ReadAllText(@"C:\Users\Erez_Konforti\OneDrive - Dell Technologies\Documents\Shabzak data\missions-detailed.json");
+            var missionsPath = Path.Combine(env.ContentRootPath, "..", "DataLayer", "missions-detailed.json");
+            var missionsJson = System.IO.File.ReadAllText(missionsPath);
             var missions = JsonConvert.DeserializeObject<List<DataLayer.Models.Mission>>(missionsJson);
             foreach (var mission in missions)
             {
@@ -116,7 +125,7 @@ namespace _04.ShabzakAPI.Controllers
             db.Missions.AddRange(missions);
             db.SaveChanges();
 
-            return null;
+            return Ok("Seed data loaded successfully.");
         }
 
         /// <summary>

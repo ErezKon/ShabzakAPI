@@ -1,6 +1,7 @@
 ﻿using BL.Cache;
 using BL.Models;
 using BL.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ShabzakAPI.ViewModels;
@@ -13,6 +14,7 @@ namespace ShabzakAPI.Controllers
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class MetadataController : ControllerBase
     {
         private readonly MetadataService _metadataService;
@@ -61,7 +63,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="request">From/To dates and soldier type filter.</param>
         /// <returns>Nested dictionary: soldier → mission → count.</returns>
         [HttpPost("GetAssignmentsBreakdownPerSoldiers")]
-        public Dictionary<string, Dictionary<string, int>> GetAssignmentsBreakdownPerSoldiers(GetMetadataRequest request)
+        public List<AssignmentsBreakdownVM> GetAssignmentsBreakdownPerSoldiers(GetMetadataRequest request)
         {
             var ret = _metadataService.GetAssignmentsBreakdownPerSoldiers(request.From, request.To, request.SoldierType)
                 .Select(r => new AssignmentsBreakdownVM
