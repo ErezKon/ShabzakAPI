@@ -37,7 +37,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="request">From/To dates and soldier type filter.</param>
         /// <returns>Dictionary mapping soldier name to assignment count.</returns>
         [HttpPost("GetAssignmentsPerSoldiers")]
-        public Dictionary<string, int> GetAssignmentsPerSoldiers(GetMetadataRequest request) 
+        public List<AssignmentsPerSoldier> GetAssignmentsPerSoldiers(MetadataModel request) 
         {
             var ret = _metadataService.GetAssignmentsPerSoldiers(request.From, request.To, request.SoldierType);
             return ret;
@@ -50,7 +50,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="request">From/To dates and soldier type filter.</param>
         /// <returns>Dictionary mapping soldier name to total hours.</returns>
         [HttpPost("GetHoursPerSoldiers")]
-        public Dictionary<string, double> GetHoursPerSoldiers(GetMetadataRequest request)
+        public List<HoursPerSoldier> GetHoursPerSoldiers(MetadataModel request)
         {
             var ret = _metadataService.GetHoursPerSoldiers(request.From, request.To, request.SoldierType);
             return ret;
@@ -63,7 +63,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="request">From/To dates and soldier type filter.</param>
         /// <returns>Nested dictionary: soldier → mission → count.</returns>
         [HttpPost("GetAssignmentsBreakdownPerSoldiers")]
-        public List<AssignmentsBreakdownVM> GetAssignmentsBreakdownPerSoldiers(GetMetadataRequest request)
+        public List<AssignmentsBreakdownVM> GetAssignmentsBreakdownPerSoldiers(MetadataModel request)
         {
             var ret = _metadataService.GetAssignmentsBreakdownPerSoldiers(request.From, request.To, request.SoldierType)
                 .Select(r => new AssignmentsBreakdownVM

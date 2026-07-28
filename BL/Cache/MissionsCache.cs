@@ -126,7 +126,7 @@ namespace BL.Cache
                             CommandersRequired = mission.CommandersRequired,
                             Duration = mission.Duration,
                             IsSpecial = mission.IsSpecial,
-                            MissionPositions = mission.MissionPositions,
+                            Positions = mission.Positions,
                             MissionInstances = [] 
                         };
                     }

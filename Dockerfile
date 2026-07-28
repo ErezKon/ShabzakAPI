@@ -23,6 +23,9 @@ ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "/src/04.ShabzakAPI/04.ShabzakAPI.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+USER app
 WORKDIR /app
 COPY --from=publish /app/publish .
 # Copy the entrypoint script that auto-generates Jwt__Key if not provided.

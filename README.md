@@ -27,15 +27,15 @@
 
 ## Tech Stack
 
-| Concern | Technology |
-|---|---|
-| Runtime | .NET 8 / ASP.NET Core Web API |
-| ORM | Entity Framework Core (SQL Server; SQLite fallback) |
-| DB | Azure SQL Server (prod) / SQL Server container / local SQLite |
-| Serialization | Newtonsoft.Json |
-| API docs | Swashbuckle (Swagger) |
-| Crypto | AES-256 (random IV, backward-compatible) for PII at rest, SHA-512 for password hashing |
-| Auth | JWT Bearer (`Microsoft.AspNetCore.Authentication.JwtBearer`) |
+| Concern       | Technology                                                                             |
+| ---------------| ----------------------------------------------------------------------------------------|
+| Runtime       | .NET 8 / ASP.NET Core Web API                                                          |
+| ORM           | Entity Framework Core (SQL Server; SQLite fallback)                                    |
+| DB            | Azure SQL Server (prod) / SQL Server container / local SQLite                          |
+| Serialization | Newtonsoft.Json                                                                        |
+| API docs      | Swashbuckle (Swagger)                                                                  |
+| Crypto        | AES-256 (random IV, backward-compatible) for PII at rest, SHA-512 for password hashing |
+| Auth          | JWT Bearer (`Microsoft.AspNetCore.Authentication.JwtBearer`)                           |
 
 The solution targets four class-library/web projects wired together via project references (`ShabzakAPI.sln`).
 

@@ -280,5 +280,19 @@ namespace BL.Services
             }
             return ret;
         }
+        /// <summary>
+        /// Ensures non-commanding soldiers have the 'Simple' position.
+        /// If the soldier holds no commanding position and 'Simple' is missing, it is added.
+        /// </summary>
+        private void NormalizePositions(DataLayer.Models.Soldier soldier)
+        {
+            var positions = soldier.GetSoldierPositions();
+            bool isCommander = positions.Any(p => positionHelper.CommandingPositions.Contains(p));
+            if (!isCommander && !positions.Contains(DataLayer.Models.Position.Simple))
+            {
+                positions.Add(DataLayer.Models.Position.Simple);
+                soldier.Position = string.Join(",", positions.Select(p => ((int)p).ToString()));
+            }
+        }
     }
 }
