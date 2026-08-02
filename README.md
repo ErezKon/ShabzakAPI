@@ -191,16 +191,16 @@ All secrets are externalized to `appsettings.json` or environment variables. **N
 
 ### `appsettings.json` keys
 
-| Key | Required | Description |
-|---|---|---|
-| `ConnectionStrings:ShabzakDB` | **Yes** | SQL Server connection string |
-| `Jwt:Key` | **Yes** | HMAC-SHA256 signing key (≥ 32 chars) |
-| `Jwt:Issuer` | No | Token issuer claim (default: `ShabzakAPI`) |
-| `Jwt:Audience` | No | Token audience claim (default: `ShabzakClient`) |
-| `Jwt:ExpiryMinutes` | No | Token lifetime in minutes (default: `480`) |
-| `Aes:Key` | **Yes** | AES-256 encryption key for PII at rest |
-| `Aes:LegacyIV` | No | Legacy static IV for decrypting pre-existing data |
-| `Cors:AllowedOrigins` | No | Comma-separated allowed origins (default: `http://localhost:5230`) |
+| Key                           | Required | Description                                                        |
+| -------------------------------| ----------| --------------------------------------------------------------------|
+| `ConnectionStrings:ShabzakDB` | **Yes**  | SQL Server connection string                                       |
+| `Jwt:Key`                     | **Yes**  | HMAC-SHA256 signing key (≥ 32 chars)                               |
+| `Jwt:Issuer`                  | No       | Token issuer claim (default: `ShabzakAPI`)                         |
+| `Jwt:Audience`                | No       | Token audience claim (default: `ShabzakClient`)                    |
+| `Jwt:ExpiryMinutes`           | No       | Token lifetime in minutes (default: `480`)                         |
+| `Aes:Key`                     | **Yes**  | AES-256 encryption key for PII at rest                             |
+| `Aes:LegacyIV`                | No       | Legacy static IV for decrypting pre-existing data                  |
+| `Cors:AllowedOrigins`         | No       | Comma-separated allowed origins (default: `http://localhost:5230`) |
 
 ### Environment variable overrides
 
