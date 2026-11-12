@@ -1,10 +1,12 @@
 ﻿using BL.Cache;
 using BL.Extensions;
 using BL.Models;
+using BL.Models.Schedule;
 using BL.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using ShabzakAPI.Auth;
 using ShabzakAPI.ViewModels;
 using Translators.Models;
 
@@ -23,11 +25,15 @@ namespace ShabzakAPI.Controllers
 
         private readonly SoldiersCache _soldiersCache;
         private readonly AutoAssignService _autoAssignService;
-        public MissionController(MissionService missionService, SoldiersCache soldiersCache, AutoAssignService autoAssignService)
+        private readonly ScheduleService _scheduleService;
+        private readonly MissionEditService _missionEditService;
+        public MissionController(MissionService missionService, SoldiersCache soldiersCache, AutoAssignService autoAssignService, ScheduleService scheduleService, MissionEditService missionEditService)
         {
             _missionService = missionService;
             _soldiersCache = soldiersCache;
             _autoAssignService = autoAssignService;
+            _scheduleService = scheduleService;
+            _missionEditService = missionEditService;
         }
 
         /// <summary>
@@ -42,12 +48,24 @@ namespace ShabzakAPI.Controllers
         }
 
         /// <summary>
+        /// Compact mission list: definition, positions, and instance/assignment counts (no instance graph).
+        /// Available to any authenticated user.
+        /// </summary>
+        /// <returns>One summary per mission, ordered by ID.</returns>
+        [HttpGet("GetMissionsSummary")]
+        public List<MissionSummaryDto> GetMissionsSummary()
+        {
+            return _scheduleService.GetMissionsSummary();
+        }
+
+        /// <summary>
         /// Creates a new mission with its positions and time instances.
         /// For special missions, a single instance is created from start time + duration.
         /// </summary>
         /// <param name="mission">The mission to create, including positions and instances.</param>
         /// <returns>The created mission with generated IDs.</returns>
         [HttpPost("AddMission")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public Mission AddMission(Mission mission)
         {
 
@@ -62,6 +80,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="mission">The updated mission data including instances and soldier assignments.</param>
         /// <returns>The updated mission.</returns>
         [HttpPost("UpdateMission")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public Mission UpdateMission(AddEditMission mission)
         {
             var parsedMission = new Mission
@@ -115,6 +134,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="missionId">The ID of the mission to delete.</param>
         /// <returns>The deleted mission's ID.</returns>
         [HttpPost("DeleteMission")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public int DeleteMission(int missionId)
         {
 
@@ -128,6 +148,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="soldiers">Request containing mission ID, instance ID, and list of soldier-position pairs.</param>
         /// <returns>The updated mission with the new assignments.</returns>
         [HttpPost("AssignSoldiers")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public Mission AssignSoldiers(AssignSoldierToMissionRequest soldiers)
         {
             var ret = _missionService.AssignSoldiersToMission(soldiers.MissionId, soldiers.MissionInstanceId, soldiers.Soldiers
@@ -149,6 +170,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="soldierId">The soldier ID to unassign.</param>
         /// <returns>The updated mission.</returns>
         [HttpPost("UnassignSoldier")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public Mission UnassignSoldier(int missionId, int missionInstanceId, int soldierId)
         {
 
@@ -165,6 +187,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="request">Contains the mission instance ID and optional soldier pool filter.</param>
         /// <returns>Ranked list of soldiers with availability and rest-time data.</returns>
         [HttpPost("GetAvailableSoldiers")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public List<GetAvailableSoldiersModel> GetAvailableSoldiers(GetAvailableSoldiersRequest request)
         {
             var ret = _missionService.GetAvailableSoldiers(request.MissionInstanceId, request.SoldiersPool);
@@ -192,6 +215,7 @@ namespace ShabzakAPI.Controllers
         /// </summary>
         /// <param name="soldiers">The soldier-mission assignments (all must be for the same instance).</param>
         [HttpPost("AssignSoldiersToMissionInstance")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public void AssignSoldiersToMissionInstance(List<SoldierMission> soldiers)
         {
             _missionService.AssignSoldiersToMissionInstance(soldiers);
@@ -205,6 +229,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="model">Date range, selected missions/soldiers, max schedules, and scoring options.</param>
         /// <returns>List of candidate schedules with validation results. The best is marked with IsBestCandidate.</returns>
         [HttpPost("AutoAssign")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public List<AssignmentValidationModel> AutoAssign(AutoAssignModel model)
         {
             var ret = _autoAssignService.AutoAssign(
@@ -224,6 +249,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="candidateId">The GUID of the candidate schedule to accept.</param>
         /// <returns>All missions with updated assignments.</returns>
         [HttpPost("AcceptAssignCandidate")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public List<Mission> AcceptAssignCandidate(string candidateId)
         {
             var ret = _autoAssignService.AcceptAutoAssignCandidate(candidateId);
@@ -248,6 +274,7 @@ namespace ShabzakAPI.Controllers
         /// </summary>
         /// <returns>List of candidate GUIDs.</returns>
         [HttpGet("GetAllCandidates")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public List<string> GetAllCandidates()
         {
             var ret = _autoAssignService.GetAllCandidates();
@@ -260,6 +287,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="guid">The candidate schedule GUID.</param>
         /// <returns>The candidate schedule with valid/faulty/skipped instance breakdowns.</returns>
         [HttpPost("GetCandidate")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public AssignmentValidationModel GetCandidate(string guid)
         {
             var ret = _autoAssignService.GetCandidate(guid);
@@ -273,6 +301,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="missionInstanceId">The instance to remove the soldier from.</param>
         /// <returns>All missions with updated assignments.</returns>
         [HttpPost("RemoveSoldierFromMissionInstance")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public List<Mission> RemoveSoldierFromMissionInstance(int soldierId, int missionInstanceId)
         {
             _autoAssignService.RemoveSoldierFromMissionInstance(soldierId, missionInstanceId);
@@ -288,6 +317,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="model">Date range, missions, soldiers, scoring options, pause strategy, and display flags.</param>
         /// <returns>The first step of the interactive session (Paused with pending instance, or Completed).</returns>
         [HttpPost("StartInteractiveAutoAssign")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public ActionResult<InteractiveAutoAssignStep> StartInteractiveAutoAssign(StartInteractiveAutoAssignModel model)
         {
             try
@@ -315,6 +345,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="model">Session ID, user's soldier picks, and skip flag.</param>
         /// <returns>The next step (Paused with next pending instance, or Completed with final results).</returns>
         [HttpPost("ContinueInteractiveAutoAssign")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public ActionResult<InteractiveAutoAssignStep> ContinueInteractiveAutoAssign(ContinueInteractiveAutoAssignModel model)
         {
             try
@@ -337,6 +368,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="sessionId">The session ID to cancel.</param>
         /// <returns>No content on success.</returns>
         [HttpPost("CancelInteractiveAutoAssign")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public ActionResult CancelInteractiveAutoAssign(string sessionId)
         {
             _autoAssignService.CancelInteractive(sessionId);
@@ -351,6 +383,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="request">The mission instance ID and the soldier ID to exclude (the one being replaced).</param>
         /// <returns>Ranked list of replacement candidates with scores and overlap info.</returns>
         [HttpPost("GetReplacementCandidates")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public List<ReplacementCandidateModel> GetReplacementCandidates(GetReplacementCandidatesRequest request)
         {
             var ret = _missionService.GetReplacementCandidates(request.MissionInstanceId, request.ExcludeSoldierId);
@@ -365,6 +398,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="request">Contains instance ID, old/new soldier IDs, swap flag, and optional swap instance ID.</param>
         /// <returns>All missions with updated assignments.</returns>
         [HttpPost("ReplaceSoldierInMissionInstance")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public List<Mission> ReplaceSoldierInMissionInstance(ReplaceSoldierRequest request)
         {
             _missionService.ReplaceSoldierInMissionInstance(
@@ -375,5 +409,77 @@ namespace ShabzakAPI.Controllers
                 request.SwapMissionInstanceId);
             return GetMissions();
         }
+
+        /// <summary>
+        /// Creates a mission with its position slots (ISO-based, agent-facing). A special mission gets one instance at specialStart
+        /// lasting Duration hours; a recurring mission optionally gets instances generated over <c>generate</c>.
+        /// Value: <c>{ mission: MissionSummaryDto, generatedInstances }</c>.
+        /// </summary>
+        [HttpPost("CreateMission")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
+        public ActionResult<GeneralResponse<CreateMissionResultDto>> CreateMission(CreateMissionRequest request) =>
+            this.ExecuteWrite(
+                "Mission/CreateMission",
+                $"special={request.IsSpecial} slots={request.Positions?.Count ?? 0} generate={request.Generate != null}",
+                () => _missionEditService.CreateMission(request.ToInput()));
+
+        /// <summary>
+        /// Updates the given mission fields and upserts its position slots. Never touches instances (unlike the destructive
+        /// UpdateMission). Removing a slot that assignments reference returns 409. Value: the updated <see cref="MissionSummaryDto"/>.
+        /// </summary>
+        [HttpPost("UpdateMissionDetails")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
+        public ActionResult<GeneralResponse<MissionSummaryDto>> UpdateMissionDetails(UpdateMissionDetailsRequest request) =>
+            this.ExecuteWrite(
+                "Mission/UpdateMissionDetails",
+                $"mission={request.Id} slots={request.Positions?.Count.ToString() ?? "unchanged"}",
+                () => _missionEditService.UpdateMissionDetails(request.ToInput()));
+
+        /// <summary>
+        /// Generates back-to-back instances of the mission's duration over [from, to) (dates take the mission's FromTime/ToTime),
+        /// skipping slots that overlap existing instances. dryRun previews without saving.
+        /// Value: <c>{ count, skippedExisting, from, to, preview (≤ 50), lastSlot }</c>.
+        /// </summary>
+        [HttpPost("GenerateMissionInstances")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
+        public ActionResult<GeneralResponse<GenerateInstancesResultDto>> GenerateMissionInstances(GenerateMissionInstancesRequest request) =>
+            this.ExecuteWrite(
+                "Mission/GenerateMissionInstances",
+                $"mission={request.MissionId} dryRun={request.DryRun}",
+                () => _missionEditService.GenerateMissionInstances(request.MissionId, request.From, request.To, request.DryRun));
+
+        /// <summary>
+        /// Adds explicit instances to a mission; they may not overlap each other (400) or existing instances of the mission (409).
+        /// Value: the created instances.
+        /// </summary>
+        [HttpPost("AddMissionInstances")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
+        public ActionResult<GeneralResponse<List<ScheduleInstanceDto>>> AddMissionInstances(AddMissionInstancesRequest request) =>
+            this.ExecuteWrite(
+                "Mission/AddMissionInstances",
+                $"mission={request.MissionId} count={request.Instances?.Count ?? 0}",
+                () => _missionEditService.AddMissionInstances(request.MissionId, request.ToSlots()));
+
+        /// <summary>
+        /// Changes an instance's times. Assigned soldiers are re-validated at the new times: an OVERLAP blocks (409) unless
+        /// allowViolations; other violations are reported. Overlapping another instance of the mission is 409. dryRun does not save.
+        /// Value: <c>{ instance (null when blocked), validations }</c>.
+        /// </summary>
+        [HttpPost("UpdateMissionInstance")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
+        public ActionResult<GeneralResponse<UpdateInstanceResultDto>> UpdateMissionInstance(UpdateMissionInstanceRequest request) =>
+            this.ExecuteWrite(
+                "Mission/UpdateMissionInstance",
+                $"instance={request.MissionInstanceId} allowViolations={request.AllowViolations} dryRun={request.DryRun}",
+                () => _missionEditService.UpdateMissionInstance(request.MissionInstanceId, request.From, request.To, request.AllowViolations, request.DryRun));
+
+        /// <summary>Deletes one instance and its assignments. Value: <c>{ deletedAssignments }</c>.</summary>
+        [HttpPost("DeleteMissionInstance")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
+        public ActionResult<GeneralResponse<DeleteInstanceResultDto>> DeleteMissionInstance(int missionInstanceId) =>
+            this.ExecuteWrite(
+                "Mission/DeleteMissionInstance",
+                $"instance={missionInstanceId}",
+                () => _missionEditService.DeleteMissionInstance(missionInstanceId));
     }
 }

@@ -5,6 +5,7 @@ using DataLayer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using ShabzakAPI.Auth;
 using System.Text;
 using Translators.Encryption;
@@ -60,9 +61,11 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
         ClockSkew = TimeSpan.FromMinutes(1)
     };
+    // Reject deleted/disabled accounts and refresh the role claim on every request.
+    options.Events = new JwtBearerEvents { OnTokenValidated = TokenRevalidation.OnTokenValidated };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(Policies.Configure);
 builder.Services.AddControllers();
 
 var usersCache = UsersCache.GetInstance();
@@ -86,11 +89,36 @@ builder.Services.AddSingleton(metadataService);
 var autoAssignService = new AutoAssignService(soldiersCache, missionsCache, missionService);
 builder.Services.AddSingleton(autoAssignService);
 
-var userService = new UserService(usersCache);
+var userService = new UserService(usersCache, soldiersCache);
 builder.Services.AddSingleton(userService);
 
+var scheduleService = new ScheduleService(soldiersCache);
+builder.Services.AddSingleton(scheduleService);
+
+var missionEditService = new MissionEditService(scheduleService);
+builder.Services.AddSingleton(missionEditService);
+
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    // "Authorize" button in Swagger UI: paste the JWT returned by /api/User/Login (without the "Bearer " prefix).
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "JWT from /api/User/Login"
+    });
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } },
+            Array.Empty<string>()
+        }
+    });
+});
 
 var corsPolicy = "AllPolicy";
 var allowedOrigins = config["Cors:AllowedOrigins"] ?? "*";

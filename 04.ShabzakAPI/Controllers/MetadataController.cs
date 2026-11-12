@@ -4,6 +4,7 @@ using BL.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using ShabzakAPI.Auth;
 using ShabzakAPI.ViewModels;
 
 namespace ShabzakAPI.Controllers
@@ -11,6 +12,7 @@ namespace ShabzakAPI.Controllers
     /// <summary>
     /// Controller for assignment statistics and fairness metadata.
     /// Provides aggregated data for charts and reports on how evenly soldiers are assigned.
+    /// All endpoints are AdminOrAbove.
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
@@ -37,6 +39,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="request">From/To dates and soldier type filter.</param>
         /// <returns>Dictionary mapping soldier name to assignment count.</returns>
         [HttpPost("GetAssignmentsPerSoldiers")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public List<AssignmentsPerSoldier> GetAssignmentsPerSoldiers(MetadataModel request) 
         {
             var ret = _metadataService.GetAssignmentsPerSoldiers(request.From, request.To, request.SoldierType);
@@ -50,6 +53,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="request">From/To dates and soldier type filter.</param>
         /// <returns>Dictionary mapping soldier name to total hours.</returns>
         [HttpPost("GetHoursPerSoldiers")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public List<HoursPerSoldier> GetHoursPerSoldiers(MetadataModel request)
         {
             var ret = _metadataService.GetHoursPerSoldiers(request.From, request.To, request.SoldierType);
@@ -63,6 +67,7 @@ namespace ShabzakAPI.Controllers
         /// <param name="request">From/To dates and soldier type filter.</param>
         /// <returns>Nested dictionary: soldier → mission → count.</returns>
         [HttpPost("GetAssignmentsBreakdownPerSoldiers")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public List<AssignmentsBreakdownVM> GetAssignmentsBreakdownPerSoldiers(MetadataModel request)
         {
             var ret = _metadataService.GetAssignmentsBreakdownPerSoldiers(request.From, request.To, request.SoldierType)

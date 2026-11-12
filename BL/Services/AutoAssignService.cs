@@ -1304,6 +1304,7 @@ namespace BL.Services
             using var db = DbFactory.Create();
             var instance = db.MissionInstances
                 .Include(mi => mi.Mission)
+                    .ThenInclude(m => m.MissionPositions)
                 .First(mi => mi.Id == missionInstanceId);
             var model = db.SoldierMission
                 .FirstOrDefault(mi => mi.SoldierId == soldierId && mi.MissionInstanceId == missionInstanceId)

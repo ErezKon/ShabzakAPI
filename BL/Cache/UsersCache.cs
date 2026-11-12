@@ -14,15 +14,18 @@ using Translators.Translators;
 namespace BL.Cache
 {
     /// <summary>
-    /// Singleton in-memory cache for user data. Stores DB user entities keyed by hashed username.
-    /// Auto-reloads every 5 minutes. Thread-safe via locking on the dictionary.
+    /// Singleton in-memory cache for user data. Stores DB user entities keyed by hashed username
+    /// (plus a secondary index by user ID). Auto-reloads every 5 minutes. Thread-safe via a single lock object.
+    /// Updated entities replace the cached instance (replace-on-update) instead of being mutated in place.
     /// </summary>
     public class UsersCache
     {
         private static UsersCache Instance { get; set; }
         private static readonly object mutex = new();
+        private readonly object _usersLock = new();
         private Timer? _reloadTimer; // FIX: Store timer reference to prevent GC collection.
         private Dictionary<string, DataLayer.Models.User> usersDic = [];
+        private Dictionary<int, DataLayer.Models.User> usersById = [];
         private UsersCache()
         {
             Logger.Log("Creating Users Cache");
@@ -68,13 +71,85 @@ namespace BL.Cache
                 //.Select(s => s.Decrypt())
                 .ToList();
 
-            usersDic = db.Users
-            .ToList()
+            var byName = allUsers
             //.Select(s => s.Decrypt())
             .GroupBy(s => s.Name)
             .ToDictionary(k => k.Key, v => v.Single());
+            var byId = allUsers.ToDictionary(u => u.Id);
 
-            Logger.Log($"Loaded {usersDic.Count()} users to cache");
+            lock (_usersLock)
+            {
+                usersDic = byName;
+                usersById = byId;
+            }
+
+            Logger.Log($"Loaded {byName.Count} users to cache");
+        }
+
+        /// <summary>
+        /// Returns a snapshot of all cached users (DB entities). Callers must not mutate the returned entities.
+        /// </summary>
+        public List<DataLayer.Models.User> GetAllUsers()
+        {
+            lock (_usersLock)
+            {
+                return usersById.Values.ToList();
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a user by ID. Falls back to a DB lookup (and caches the result) when not cached.
+        /// </summary>
+        /// <param name="userId">The user's ID.</param>
+        /// <returns>The DB user entity, or null if not found.</returns>
+        public DataLayer.Models.User? GetUserById(int userId)
+        {
+            lock (_usersLock)
+            {
+                if (usersById.TryGetValue(userId, out var cached))
+                {
+                    return cached;
+                }
+            }
+            using var db = DataLayer.DbFactory.Create();
+            var user = db.Users.AsNoTracking().FirstOrDefault(u => u.Id == userId);
+            if (user != null)
+            {
+                AddOrReplaceUser(user);
+            }
+            return user;
+        }
+
+        /// <summary>
+        /// Adds a user to the cache or replaces the cached instance with the same ID (replace-on-update).
+        /// </summary>
+        /// <param name="user">The fresh DB user entity.</param>
+        public void AddOrReplaceUser(DataLayer.Models.User user)
+        {
+            lock (_usersLock)
+            {
+                if (usersById.TryGetValue(user.Id, out var previous) && previous.Name != user.Name)
+                {
+                    usersDic.Remove(previous.Name);
+                }
+                usersDic[user.Name] = user;
+                usersById[user.Id] = user;
+            }
+        }
+
+        /// <summary>
+        /// Removes a user (by ID) from the cache, e.g. after deletion.
+        /// </summary>
+        /// <param name="userId">The deleted user's ID.</param>
+        public void RemoveUser(int userId)
+        {
+            lock (_usersLock)
+            {
+                if (usersById.Remove(userId, out var previous))
+                {
+                    usersDic.Remove(previous.Name);
+                }
+            }
         }
 
         /// <summary>
@@ -85,33 +160,27 @@ namespace BL.Cache
         /// <returns>The DB user entity, or null if not found.</returns>
         public DataLayer.Models.User? GetUser(string username)
         {
-            lock (usersDic)
+            lock (_usersLock)
             {
                 if (usersDic.TryGetValue(username, out var cached))
                 {
                     return cached;
                 }
-                using var db = DataLayer.DbFactory.Create();
-                var user = db.Users
-                    .FirstOrDefault(u => u.Name.Equals(username));
-                if(user != null)
-                {
-                    AddUser(user);
-                }
-                return user;
             }
+            using var db = DataLayer.DbFactory.Create();
+            var user = db.Users
+                .FirstOrDefault(u => u.Name.Equals(username));
+            if(user != null)
+            {
+                AddUser(user);
+            }
+            return user;
         }
 
         /// <summary>
         /// Adds or updates a user in the cache dictionary.
         /// </summary>
         /// <param name="user">The DB user entity to cache.</param>
-        public void AddUser(DataLayer.Models.User user)
-        {
-            lock (usersDic)
-            {
-                usersDic[user.Name] = user;
-            }
-        }
+        public void AddUser(DataLayer.Models.User user) => AddOrReplaceUser(user);
     }
 }

@@ -1,5 +1,6 @@
 ﻿using BL.Cache;
 using BL.Extensions;
+using BL.Models.Users;
 using BL.Services;
 using DataLayer;
 using Microsoft.AspNetCore.Authorization;
@@ -14,8 +15,9 @@ using Translators.Models;
 namespace ShabzakAPI.Controllers
 {
     /// <summary>
-    /// Controller for user authentication, password management, and bulk user creation from soldier records.
-    /// Login is anonymous; all other endpoints require a valid JWT Bearer token.
+    /// Controller for user authentication, password management, bulk user creation from soldier records,
+    /// and login-account management. Login is anonymous; all other endpoints require a valid JWT Bearer token.
+    /// Account management is AdminOrAbove; role changes and SuperAdmin accounts require SuperAdmin (see <see cref="UserAccountGuard"/>).
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
@@ -24,33 +26,61 @@ namespace ShabzakAPI.Controllers
     {
         private readonly UserService _userService;
         private readonly SoldiersCache _soldiersCache;
+        private readonly UsersCache _usersCache;
         /// <summary>
         /// Initializes a new instance of the UserController class.
         /// </summary>
         /// <param name="userService">The user service instance.</param>
         /// <param name="soldiersCache">The soldiers cache instance.</param>
-        public UserController(UserService userService, SoldiersCache soldiersCache) 
+        /// <param name="usersCache">The users cache instance.</param>
+        public UserController(UserService userService, SoldiersCache soldiersCache, UsersCache usersCache) 
         {
             _soldiersCache = soldiersCache;
             _userService = userService;
+            _usersCache = usersCache;
+        }
+
+        /// <summary>
+        /// Returns the caller's identity (no secrets): id, role, enabled/activated flags and linked soldier.
+        /// </summary>
+        [HttpGet("Me")]
+        public ActionResult<MeDto> Me()
+        {
+            var userId = User.GetUserId();
+            var me = userId.HasValue ? _userService.GetMe(userId.Value) : null;
+            return me == null ? Unauthorized() : Ok(me);
         }
 
         /// <summary>
         /// Resets a user's password. Requires authentication (JWT).
+        /// Regular users may only reset their own password (403 otherwise); admins may reset others,
+        /// but only a SuperAdmin may reset a SuperAdmin's password.
         /// </summary>
         /// <param name="model">Username, new password, and whether the password is already encrypted.</param>
         /// <returns>Success/failure response with message.</returns>
         [HttpPost("ResetPassword")]
-        public GeneralResponse<string> ResetPassword(ResetPasswordVM model)
+        public ActionResult<GeneralResponse<string>> ResetPassword(ResetPasswordVM model)
         {
             using var db = DbFactory.Create();
             var encUsername = model.Encrypted ? model.Username : Sha512Encryptor.Encrypt(model.Username);
-            var cache = UsersCache.GetInstance();
-            var user = cache.GetUser(encUsername);
+            var user = _usersCache.GetUser(encUsername);
+            var callerId = User.GetUserId() ?? 0;
 
+            if (!User.IsAdminOrAbove() && (user == null || user.Id != callerId))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new GeneralResponse<string> { Success = false, ErrorMessage = "You can only reset your own password." });
+            }
             if (user == null)
             {
                 return new GeneralResponse<string> { Success = false, ErrorMessage = "User not found." };
+            }
+            try
+            {
+                _userService.EnsureCanResetPassword(callerId, User.GetRole(), user);
+            }
+            catch (UserAccountException ex)
+            {
+                return AccountError<string>(ex);
             }
             var encPass = model.Encrypted ? model.Password : Sha512Encryptor.Encrypt(model.Password);
             var pass = Sha512Encryptor.HashWithPbkdf2(encPass);
@@ -111,12 +141,14 @@ namespace ShabzakAPI.Controllers
 
         /// <summary>
         /// Bulk creates user accounts from soldier records. Username = SHA-512(personalNumber),
-        /// Password = SHA-512(phone + generated_salt). Only creates users for soldiers that don't already have accounts.
+        /// Password = SHA-512(phone + generated_salt). Only creates users for soldiers that don't already have accounts
+        /// (soldiers with an existing account or personal number "N/A" are skipped).
         /// Requires Admin or SuperAdmin role.
         /// </summary>
         /// <param name="soldierIds">List of soldier IDs to create user accounts for.</param>
         /// <returns>Response containing the number of users created.</returns>
         [HttpPost("CreateUsersForSoldiers")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
         public GeneralResponse<int> CreateUsersForSoldiers(List<int> soldierIds)
         {
             var ret = new List<User>();
@@ -127,7 +159,7 @@ namespace ShabzakAPI.Controllers
             {
                 foreach (var soldier in soldiers)
                 {
-                    if(soldier.PersonalNumber.Equals("N/A"))
+                    if(soldier.PersonalNumber.Equals("N/A") || _userService.HasAccount(soldier))
                     {
                         continue;
                     }
@@ -149,6 +181,78 @@ namespace ShabzakAPI.Controllers
                 };
             }
             
+        }
+
+        /// <summary>
+        /// Lists all login accounts (whitelisted fields; no hashed username, password or salt).
+        /// </summary>
+        [HttpGet("GetUsers")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
+        public List<UserAccountDto> GetUsers() => _userService.GetAllUsers();
+
+        /// <summary>
+        /// Updates an account's role / enabled / activated flags. Setting the role requires SuperAdmin.
+        /// Returns 403 (permission), 400 (self change), 409 (last enabled SuperAdmin) or 404 on guard failures.
+        /// </summary>
+        [HttpPost("UpdateUser")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
+        public ActionResult<GeneralResponse<UserAccountDto>> UpdateUser(UpdateUserRequest request)
+        {
+            if (request.Role.HasValue && !Enum.IsDefined(request.Role.Value))
+            {
+                return BadRequest(new GeneralResponse<UserAccountDto> { Success = false, ErrorMessage = "Unknown role." });
+            }
+            if (!request.Role.HasValue && !request.Enabled.HasValue && !request.Activated.HasValue)
+            {
+                return BadRequest(new GeneralResponse<UserAccountDto> { Success = false, ErrorMessage = "Nothing to update." });
+            }
+            return ExecuteAccountChange(() => _userService.UpdateUser(
+                User.GetUserId() ?? 0, User.GetRole(), request.UserId, request.Role, request.Enabled, request.Activated));
+        }
+
+        /// <summary>
+        /// Deletes a login account (the soldier record is kept). Guard rules as in UpdateUser.
+        /// </summary>
+        [HttpPost("DeleteUser")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
+        public ActionResult<GeneralResponse<int>> DeleteUser(int userId) =>
+            ExecuteAccountChange(() => _userService.DeleteUser(User.GetUserId() ?? 0, User.GetRole(), userId));
+
+        /// <summary>
+        /// Resets an account's password to the default (derived from the linked soldier's phone).
+        /// Never accepts or returns a password.
+        /// </summary>
+        [HttpPost("ResetPasswordToDefault")]
+        [Authorize(Policy = Policies.AdminOrAbove)]
+        public ActionResult<GeneralResponse<string>> ResetPasswordToDefault(int userId) =>
+            ExecuteAccountChange(() =>
+            {
+                _userService.ResetPasswordToDefault(User.GetUserId() ?? 0, User.GetRole(), userId);
+                return "Password reset to default.";
+            });
+
+        private ActionResult<GeneralResponse<T>> ExecuteAccountChange<T>(Func<T> action)
+        {
+            try
+            {
+                return new GeneralResponse<T> { Success = true, Value = action() };
+            }
+            catch (UserAccountException ex)
+            {
+                return AccountError<T>(ex);
+            }
+        }
+
+        private ObjectResult AccountError<T>(UserAccountException ex)
+        {
+            var status = ex.Outcome switch
+            {
+                AccountGuardOutcome.Forbidden => StatusCodes.Status403Forbidden,
+                AccountGuardOutcome.Conflict => StatusCodes.Status409Conflict,
+                AccountGuardOutcome.NotFound => StatusCodes.Status404NotFound,
+                _ => StatusCodes.Status400BadRequest
+            };
+            return StatusCode(status, new GeneralResponse<T> { Success = false, ErrorMessage = ex.Message });
         }
     }
 }

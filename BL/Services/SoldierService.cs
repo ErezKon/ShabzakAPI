@@ -2,6 +2,7 @@
 using BL.Extensions;
 using BL.Logging;
 using BL.Models;
+using BL.Models.Schedule;
 using DataLayer;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -103,6 +104,29 @@ namespace BL.Services
                 Logger.Log($"Error while updating soldier:\n{ex}");
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Sets a soldier's Active flag. This is the only way to change it (<see cref="Update(DataLayer.Models.Soldier)"/> ignores
+        /// Active, because the UI soldier model has no such field). The soldier cache is reloaded synchronously so that
+        /// assignment validation sees the new flag immediately.
+        /// </summary>
+        /// <param name="soldierId">The soldier's ID.</param>
+        /// <param name="active">The new Active flag.</param>
+        /// <returns>The soldier without contact details.</returns>
+        /// <exception cref="KeyNotFoundException">Unknown soldier.</exception>
+        public SoldierLiteDto SetActive(int soldierId, bool active)
+        {
+            using var db = DbFactory.Create();
+            var soldier = db.Soldiers.FirstOrDefault(s => s.Id == soldierId)
+                ?? throw new KeyNotFoundException($"Soldier {soldierId} not found.");
+            if (soldier.Active != active)
+            {
+                soldier.Active = active;
+                db.SaveChanges();
+            }
+            SoldiersCache.ReloadCache();
+            return SoldierLiteDto.From(SoldiersCache.GetInstance().GetSoldierById(soldierId));
         }
 
         /// <summary>
