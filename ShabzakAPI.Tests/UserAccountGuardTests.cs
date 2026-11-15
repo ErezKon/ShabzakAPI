@@ -107,5 +107,48 @@ namespace ShabzakAPI.Tests
 
             Assert.True(r.IsAllowed);
         }
+
+        // CheckDeleteAll: the login accounts deleted with a soldier (Soldiers/DeleteSoldier).
+
+        [Fact]
+        public void DeleteAll_NoAccounts_IsAllowed()
+        {
+            Assert.True(UserAccountGuard.CheckDeleteAll(1, UserRole.Admin, [], enabledSuperAdminCount: 1).IsAllowed);
+        }
+
+        [Fact]
+        public void DeleteAll_AdminMayDeleteRegularAndAdminAccounts()
+        {
+            var r = UserAccountGuard.CheckDeleteAll(1, UserRole.Admin, [(2, UserRole.Regular, true), (3, UserRole.Admin, true)], enabledSuperAdminCount: 1);
+
+            Assert.True(r.IsAllowed);
+        }
+
+        [Fact]
+        public void DeleteAll_AdminCannotDeleteASuperAdminAccount()
+        {
+            var r = UserAccountGuard.CheckDeleteAll(1, UserRole.Admin, [(2, UserRole.SuperAdmin, true)], enabledSuperAdminCount: 2);
+
+            Assert.Equal(AccountGuardOutcome.Forbidden, r.Outcome);
+        }
+
+        [Fact]
+        public void DeleteAll_CannotDeleteOwnAccount()
+        {
+            var r = UserAccountGuard.CheckDeleteAll(5, UserRole.SuperAdmin, [(5, UserRole.SuperAdmin, true)], enabledSuperAdminCount: 2);
+
+            Assert.Equal(AccountGuardOutcome.BadRequest, r.Outcome);
+        }
+
+        [Fact]
+        public void DeleteAll_KeepsTheLastEnabledSuperAdmin_CountingEarlierDeletions()
+        {
+            Assert.True(UserAccountGuard.CheckDeleteAll(1, UserRole.SuperAdmin, [(2, UserRole.SuperAdmin, true)], enabledSuperAdminCount: 2).IsAllowed);
+            Assert.Equal(AccountGuardOutcome.Conflict,
+                UserAccountGuard.CheckDeleteAll(1, UserRole.SuperAdmin, [(2, UserRole.SuperAdmin, true)], enabledSuperAdminCount: 1).Outcome);
+            // Two enabled SuperAdmins in one deletion with two in total: the second would be the last one.
+            Assert.Equal(AccountGuardOutcome.Conflict,
+                UserAccountGuard.CheckDeleteAll(1, UserRole.SuperAdmin, [(2, UserRole.SuperAdmin, true), (3, UserRole.SuperAdmin, true)], enabledSuperAdminCount: 2).Outcome);
+        }
     }
 }

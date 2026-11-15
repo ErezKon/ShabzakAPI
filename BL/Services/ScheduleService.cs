@@ -25,6 +25,9 @@ namespace BL.Services
         /// <summary>Maximum number of soldiers per ValidateAssignments call.</summary>
         public const int MaxValidateSoldiers = 1000;
 
+        /// <summary>Maximum number of instance IDs per GetInstances call.</summary>
+        public const int MaxInstanceIds = 200;
+
         /// <summary>
         /// Serializes the schedule and instance writes of this process so that validation and save are atomic with respect to
         /// each other (e.g. two admins filling the last seat). Shared with <see cref="MissionEditService"/>.
@@ -85,6 +88,25 @@ namespace BL.Services
                 .Select(ToDto)
                 .Where(dto => !onlyUnfilled || !dto.IsFilled)
                 .ToList();
+        }
+
+        /// <summary>
+        /// Looks instances up by ID (same DTO as <see cref="GetAssignments"/>), in the requested order. Unknown IDs are omitted.
+        /// </summary>
+        /// <exception cref="ArgumentException">No IDs, or more than <see cref="MaxInstanceIds"/> distinct IDs.</exception>
+        public List<ScheduleInstanceDto> GetInstances(IReadOnlyCollection<int>? instanceIds)
+        {
+            var ids = instanceIds?.Distinct().ToList() ?? [];
+            if (ids.Count == 0)
+            {
+                throw new ArgumentException("At least one instance ID is required.");
+            }
+            if (ids.Count > MaxInstanceIds)
+            {
+                throw new ArgumentException($"At most {MaxInstanceIds} instances can be looked up per call.");
+            }
+            using var db = DbFactory.Create();
+            return LoadInstanceDtos(db, ids);
         }
 
         /// <summary>

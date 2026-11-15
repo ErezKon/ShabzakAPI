@@ -80,7 +80,7 @@ namespace ShabzakAPI.Controllers
             }
             catch (UserAccountException ex)
             {
-                return AccountError<string>(ex);
+                return this.AccountError<string>(ex);
             }
             var encPass = model.Encrypted ? model.Password : Sha512Encryptor.Encrypt(model.Password);
             var pass = Sha512Encryptor.HashWithPbkdf2(encPass);
@@ -239,20 +239,8 @@ namespace ShabzakAPI.Controllers
             }
             catch (UserAccountException ex)
             {
-                return AccountError<T>(ex);
+                return this.AccountError<T>(ex);
             }
-        }
-
-        private ObjectResult AccountError<T>(UserAccountException ex)
-        {
-            var status = ex.Outcome switch
-            {
-                AccountGuardOutcome.Forbidden => StatusCodes.Status403Forbidden,
-                AccountGuardOutcome.Conflict => StatusCodes.Status409Conflict,
-                AccountGuardOutcome.NotFound => StatusCodes.Status404NotFound,
-                _ => StatusCodes.Status400BadRequest
-            };
-            return StatusCode(status, new GeneralResponse<T> { Success = false, ErrorMessage = ex.Message });
         }
     }
 }

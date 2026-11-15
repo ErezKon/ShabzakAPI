@@ -2,7 +2,7 @@
 
 > **AI Instruction:** Every time you make a change to any file in the ShabzakAPI project, you **MUST** update this document to reflect that change — including new files, renamed files, new methods, changed architectures, new models, deleted items, etc. This file must always be accurate and up-to-date so future AI sessions can rely on it without re-analyzing the codebase. Also apply sthe same updates to the unified md document at the root folder UNIFIED_AI_CONTEXT.md
 
-> **Active initiative — AI Chat Assistant:** see `CHAT_AGENT_PLAN.md` in the workspace root (next to `UNIFIED_AI_CONTEXT.md`) for the phased plan, shared API contracts (§4) and progress tracker. Work happens on branch `feature/ai-chat` (from `opus-refactor`); P0–P4 are committed and merged into `opus-refactor` (both branches point at the same commit). JWT auth exists only on `opus-refactor` / `feature/ai-chat`; `main` is pre-JWT.
+> **Active initiative — AI Chat Assistant:** see `CHAT_AGENT_PLAN.md` in the workspace root (next to `UNIFIED_AI_CONTEXT.md`) for the phased plan, shared API contracts (§4) and progress tracker. Work goes on branch `opus-refactor`; P0–P4 (this API) are committed there (also on `feature/ai-chat`, same commit). JWT auth exists only on `opus-refactor` / `feature/ai-chat`; `main` is pre-JWT. P5–P8 built the **ShabzakAgent** service (separate repo next to this one, see its `AI_CONTEXT.md`): it calls this API with the end user's JWT (reads, and after the user's approval the vacation, soldier and account writes: `RequestVacation`, `RespondToVacationRequest`, `AddSoldier`, `UpdateSoldier`, `SetSoldierActive`, `DeleteSoldier`, `CreateUsersForSoldiers`, `UpdateUser`, `DeleteUser`, `ResetPasswordToDefault`), and in local dev it needs the API on `dotnet run --launch-profile http` (the `https` profile redirects `http://localhost:5165` to https, which the agent refuses). The agent's live checks are in `AI Plans/AI Chat Agent/verification/`: `verify-p5.ps1`, `verify-p6.ps1`, `verify-p7.ps1` and `verify-p8.ps1` (the last two run the agent with `fake-openai.mjs`, a scripted OpenAI-compatible stub, via `agent-http.ps1`), plus the real-LLM `verify-p6-llm.ps1` and `verify-p7-p8-llm.ps1`; `start-api-localdb.ps1 -LaunchProfile http|https` selects the profile. The only API change in P5–P8 (a user decision in P8): `Soldiers/DeleteSoldier` also deletes the soldier's login account, under the account guard rules. **P9–P10** (the agent's mission, shift and schedule tools, live suites `verify-p9.ps1` / `verify-p10.ps1`) added: `Schedule/GetInstances` (instances by ID, for the approval cards); a fix of `AcceptAssignCandidate`, which inserted the existing assignments of the shifts a run had skipped a second time (`FinalizeScheduleResult` no longer saves them as candidate rows, and acceptance skips rows that duplicate an assignment or point at a deleted shift / soldier / slot, `CandidateAcceptanceFilter`); and `Mission/AutoAssign` → **409** `{ message }` while interactive auto-assign sessions are active (was 500). **P11–P12** (the chat widget in the UI) changed nothing in this API; the UI's dev `serverURL` now targets the `http` profile (`http://localhost:5165/api`) so the UI and the agent share one local API, and their live suite is `verify-p11-p12.ps1` (headless Chrome driven by `ui-e2e.mjs`). **P13 (deployment)** changed no API code: the workspace's `docker-compose.yml` now passes this container `ConnectionStrings__ShabzakDB` (from the root `.env`'s `SHABZAK_DB_CONNECTION_STRING`, required: without it the API can't start since P0 removed the hardcoded string) and `Jwt__Key` (from `JWT_KEY`; empty = a new key on every start), the UI container's nginx proxies `/api/` to it on the UI's origin, and the agent container calls `http://shabzak-api:8080/api` (§2.4.1). Its live suite `verify-p13.ps1` (no Docker: the UI's real `nginx.conf` on nginx for Windows in front of the local stack) also re-runs `verify-p7` … `verify-p10` through that gateway; `verify-p13-llm.ps1` is the real-LLM checklist.
 
 ---
 
@@ -10,13 +10,14 @@
 
 **Shabzak (שבצ"ק)** is a military duty-scheduling (assignment/rotation) system for an IDF (Israel Defense Forces) battalion (unit 9213). It manages soldiers, missions (guard duties, patrols, etc.), and the assignment of soldiers to mission time-slots ("instances"). The system supports both manual and automatic assignment with fairness scoring.
 
-The monorepo contains three components orchestrated by `docker-compose.yml`:
+The workspace contains four components, all orchestrated by `docker-compose.yml` (the agent since plan Phase 13):
 
 | Component | Tech | Container Port | Host Port |
 |-----------|------|---------------|-----------|
-| **Shabzak** (UI) | Angular 17, SSR, Material, NgRx | 80 (nginx) | 5230 |
+| **Shabzak** (UI) | Angular 17, SSR, Material, NgRx | 80 (nginx: static files + the `/api/` and `/agent/` proxy) | 5230 |
 | **ShabzakAPI** (Backend) | ASP.NET Core 8 Web API | 8080 | 5231 |
 | **ShabzakSQL** (DB) | SQL Server (Azure SQL in prod) | 1433 | 1433 |
+| **ShabzakAgent** (AI chat assistant) | Node 22, TypeScript, Express 5, LangChain v1 | 3000 | 5232; 3001 in local dev |
 
 **Language/locale:** Hebrew (RTL UI). The app title is שבצ"ק (short for שיבוץ צבאי קל — "easy military assignment").
 
@@ -38,6 +39,7 @@ ShabzakAPI/
 │   ├── MissionInstanceGeneratorTests.cs
 │   ├── MissionSlotPlannerTests.cs
 │   ├── ScheduleDateFormatTests.cs
+│   ├── CandidateAcceptanceFilterTests.cs
 │   └── UserAccountGuardTests.cs
 ├── 04.ShabzakAPI/        # ASP.NET Core Web API (startup, controllers, view models)
 │   ├── Program.cs         # Startup: config/secrets, JWT auth, DI, CORS, Swagger, caches, services, /health
@@ -52,8 +54,9 @@ ShabzakAPI/
 │   │   ├── UserController.cs
 │   │   ├── MetadataController.cs
 │   │   ├── ScheduleController.cs  # Compact schedule queries, assignment validation and assignment writes (agent-facing)
-│   │   └── WriteResponseExtensions.cs # ExecuteWrite: BL write result / exceptions → GeneralResponse + 200/400/404/409, ID-only log line
-│   └── ViewModels/        # Request/response DTOs for the API layer (incl. UpdateUserRequest, GetScheduleAssignmentsRequest, ValidateAssignmentsRequest, ScheduleWriteRequests.cs, MissionEditRequests.cs)
+│   │   ├── WriteResponseExtensions.cs # ExecuteWrite: BL write result / exceptions → GeneralResponse + 200/400/404/409, ID-only log line
+│   │   └── AccountResponseExtensions.cs # AccountError: UserAccountException → GeneralResponse + 403/409/404/400 (account endpoints, DeleteSoldier)
+│   └── ViewModels/        # Request/response DTOs for the API layer (incl. UpdateUserRequest, GetScheduleAssignmentsRequest, GetScheduleInstancesRequest, ValidateAssignmentsRequest, ScheduleWriteRequests.cs, MissionEditRequests.cs)
 ├── BL/                    # Business Logic layer
 │   ├── Services/
 │   │   ├── AutoAssignService.cs   (~1700 lines — the core scheduling algorithm)
@@ -65,7 +68,8 @@ ShabzakAPI/
 │   │   ├── MissionPositionService.cs
 │   │   ├── SoldierMissionService.cs
 │   │   ├── UserAccountGuard.cs    (pure account-management guard rules + UserAccountException)
-│   │   ├── ScheduleService.cs     (singleton: GetAssignments, ValidateAssignments, GetMissionsSummary; writes AssignSoldier, UnassignSoldier, ReplaceSoldier (+swap), MoveSoldier)
+│   │   ├── ScheduleService.cs     (singleton: GetAssignments, GetInstances, ValidateAssignments, GetMissionsSummary; writes AssignSoldier, UnassignSoldier, ReplaceSoldier (+swap), MoveSoldier)
+│   │   ├── CandidateAcceptanceFilter.cs (pure: which auto-assign candidate rows may be accepted — no duplicates, no dangling rows)
 │   │   ├── MissionEditService.cs  (singleton: CreateMission, UpdateMissionDetails, Generate/Add/Update/DeleteMissionInstance — never recreates instances)
 │   │   ├── ScheduleInstanceMapper.cs (pure: DB instance → ScheduleInstanceDto)
 │   │   ├── AssignmentConstraintEvaluator.cs (pure: assignment rules → AssignmentValidationDto)
@@ -213,7 +217,8 @@ Controllers  →  BL Services  →  DataLayer (EF Core DbContext)
 | `Cors:AllowedOrigins` | Comma-separated origins or `*` | Default `*`. |
 
 - **Swagger** is currently enabled in every environment (the Development-only gate in `Program.cs` is commented out). `UseHttpsRedirection` runs in Development only.
-- **Local dev:** `dotnet run --launch-profile https` (https://localhost:7170, http://localhost:5165). SQL Server LocalDB (`(localdb)\MSSQLLocalDB`) works for isolated testing: set `ConnectionStrings__ShabzakDB` for the process and `EnsureCreated()` builds the schema.
+- **Local dev:** `dotnet run --launch-profile http` (http://localhost:5165; also plain `dotnet run`), which the UI (dev `serverURL`, since P11) and the AI agent both use. The `https` profile (https://localhost:7170 + http://localhost:5165) redirects http to https, which the agent refuses (it would drop the token). SQL Server LocalDB (`(localdb)\MSSQLLocalDB`) works for isolated testing: set `ConnectionStrings__ShabzakDB` for the process and `EnsureCreated()` builds the schema.
+- **Container (docker compose, P13):** the `shabzak-api` service gets `ConnectionStrings__ShabzakDB=${SHABZAK_DB_CONNECTION_STRING:?…}` (required: compose refuses to start without it) and `Jwt__Key=${JWT_KEY:-}` from the root `.env` (documented in the root `.env.example`, never committed). Set `JWT_KEY` (≥ 32 random characters, e.g. `openssl rand -base64 32`): when it is empty, `entrypoint.sh` generates a new key on every start, which logs every user out and makes the chat agent answer 401 until they log in again. The container runs in the Production environment (no https redirect), listens on 8080 (host 5231), and is reached by the UI through its nginx `/api/` (same origin) and by the agent at `http://shabzak-api:8080/api`. `Cors:AllowedOrigins` keeps its default `*` (the containerized UI is same-origin).
 
 ### 2.4.2 Authorization Matrix
 
@@ -227,7 +232,7 @@ Roles: `Regular=0`, `Admin=1`, `SuperAdmin=2` (JWT `ClaimTypes.Role` = enum name
 | **Admin+** | Everything else: soldier CRUD (`AddSoldier`, `UpdateSoldier`, `SetSoldierActive`, `DeleteSoldier`, `ReloadCache`, `LoadCSV`), `RespondToVacationRequest`, all mission/instance CRUD (incl. `CreateMission`, `UpdateMissionDetails`, `GenerateMissionInstances`, `AddMissionInstances`, `UpdateMissionInstance`, `DeleteMissionInstance`), all assignment edits (`AssignSoldiers`, `UnassignSoldier`, `AssignSoldiersToMissionInstance`, `RemoveSoldierFromMissionInstance`, `ReplaceSoldierInMissionInstance`, `Schedule/AssignSoldier`, `Schedule/UnassignSoldier`, `Schedule/ReplaceSoldier`, `Schedule/MoveSoldier`), `GetAvailableSoldiers`, `GetReplacementCandidates`, `Schedule/ValidateAssignments`, auto-assign (batch + interactive), candidates (`GetAllCandidates`, `GetCandidate`, `AcceptAssignCandidate`), all `Metadata/*`, `User/CreateUsersForSoldiers`, `User/GetUsers`, `User/UpdateUser`, `User/DeleteUser`, `User/ResetPasswordToDefault` |
 | **SuperAdmin only (in-method)** | Setting a user's `role`; modifying, resetting or deleting a SuperAdmin account (also via `ResetPassword`) |
 
-Account guard rules (`BL/Services/UserAccountGuard.cs`, pure): no self role change, self disable/deactivate or self delete (400); an Admin cannot touch SuperAdmin accounts or set roles (403); the last enabled SuperAdmin cannot be demoted, disabled, deactivated or deleted (409); unknown user (404). Failures are returned as `GeneralResponse { success:false, errorMessage }` with that HTTP status.
+Account guard rules (`BL/Services/UserAccountGuard.cs`, pure): no self role change, self disable/deactivate or self delete (400); an Admin cannot touch SuperAdmin accounts or set roles (403); the last enabled SuperAdmin cannot be demoted, disabled, deactivated or deleted (409); unknown user (404). Failures are returned as `GeneralResponse { success:false, errorMessage }` with that HTTP status (`Controllers/AccountResponseExtensions.AccountError`). `Soldiers/DeleteSoldier` deletes the soldier's login account(s) with the soldier under the same rules (`UserAccountGuard.CheckDeleteAll`, counting SuperAdmins already deleted in the same call): a refusal deletes nothing and is answered the same way, with "The soldier's login account cannot be deleted: …".
 
 ### 2.5 Database Factory Pattern
 
@@ -265,8 +270,8 @@ Auth column: **Any** = any authenticated user, **Self** = own soldier/account un
 | POST | `GetMissionInstances` | Any | Get instances of a specific mission |
 | POST | `GetMissionInstancesInRange` | Any | Get instances within a date range |
 | POST | `AssignSoldiersToMissionInstance` | Admin+ | Sync the assignment list of one instance (add new, remove missing) |
-| POST | `AutoAssign` | Admin+ | Run batch auto-assignment algorithm |
-| POST | `AcceptAssignCandidate` | Admin+ | Accept an auto-assign candidate schedule |
+| POST | `AutoAssign` | Admin+ | Run batch auto-assignment algorithm. **409** `{ message: "Cannot run batch auto-assign while interactive sessions are active." }` while an interactive session is open (`AutoAssignConflictException`; was 500 before P10) |
+| POST | `AcceptAssignCandidate` | Admin+ | Accept an auto-assign candidate schedule: its rows become assignments (rows that duplicate an existing assignment or point at a deleted instance / soldier / slot are skipped and logged, see §2.8), then every pending candidate is discarded |
 | GET | `GetAllCandidates` | Admin+ | Get all pending candidate schedule GUIDs |
 | POST | `GetCandidate` | Admin+ | Get details of a specific candidate schedule |
 | POST | `RemoveSoldierFromMissionInstance` | Admin+ | Remove a soldier and return updated missions (the `/assignments` "הסר חייל" action; until P3 it always failed with 500 because `Mission.MissionPositions` was not loaded) |
@@ -285,7 +290,7 @@ Agent-facing, non-destructive mission/instance writes (`BL/Services/MissionEditS
 | POST | `GenerateMissionInstances` | Admin+ | Body `{ missionId, from, to, dryRun }`: ISO datetimes, or dates (`yyyy-MM-dd` → the mission's FromTime for `from`, ToTime for `to`, 00:00 if unset — like the UI dialog) → `GeneralResponse<{ count, skippedExisting, from, to (resolved), preview:[{from, to}] (≤ 50), lastSlot? }>`. Back-to-back slots of `duration` hours, last one truncated at `to`; slots overlapping existing instances are skipped (`skippedExisting`). Duration ≥ 1, range ≤ 62 days, ≤ 2000 slots; special mission → 400; dryRun saves nothing |
 | POST | `AddMissionInstances` | Admin+ | Body `{ missionId, instances:[{from, to}] }` (each ≤ 62 days, ≤ 2000) → `GeneralResponse<ScheduleInstanceDto[]>`. Instances overlapping each other → 400; overlapping an existing instance of the mission → 409 |
 | POST | `UpdateMissionInstance` | Admin+ | Body `{ missionInstanceId, from, to, allowViolations?=false, dryRun?=false }` → `GeneralResponse<{ instance (null when blocked), validations }>`. Overlapping another instance of the mission → 409. Every assigned soldier is re-validated at the new times in their own slot (own seat freed): **only OVERLAP blocks** (409) unless allowViolations; other violations (rest, vacation, …) are reported. dryRun returns the same result without saving |
-| POST | `DeleteMissionInstance?missionInstanceId=` | Admin+ | → `GeneralResponse<{ deletedAssignments }>`; cascades to the assignments and also deletes the instance's pending auto-assign candidate rows (no FK; a dangling row would break `AcceptAssignCandidate`) |
+| POST | `DeleteMissionInstance?missionInstanceId=` | Admin+ | → `GeneralResponse<{ deletedAssignments }>`; cascades to the assignments and also deletes the instance's pending auto-assign candidate rows (no FK; before P10 a dangling row broke `AcceptAssignCandidate`, which now skips such rows) |
 
 #### SoldiersController (`api/Soldiers/`)
 
@@ -299,7 +304,7 @@ Agent-facing, non-destructive mission/instance writes (`BL/Services/MissionEditS
 | POST | `AddSoldier` | Admin+ | Add a new soldier |
 | POST | `UpdateSoldier` | Admin+ | Update soldier details (ignores `Active`) |
 | POST | `SetSoldierActive` | Admin+ | Body `{ soldierId, active }` → `GeneralResponse<SoldierLiteDto>` (404 unknown). The only way to change `Active`; reloads `SoldiersCache` synchronously so validation sees `INACTIVE` immediately |
-| POST | `DeleteSoldier` | Admin+ | Delete a soldier |
+| POST | `DeleteSoldier` | Admin+ | Delete a soldier with their assignments, vacations **and login account(s)** (one `SaveChanges`; `Users.SoldierId` has no FK). The accounts go under the account guard rules for the caller (`UserAccountGuard.CheckDeleteAll`): when the caller may not delete one (a SuperAdmin account for an Admin, their own account, the last enabled SuperAdmin), nothing is deleted → 403 / 400 / 409 `GeneralResponse` error. Success body: the soldier ID. Unknown soldier → 500 (pre-existing) |
 | POST | `RequestVacation` | Self | Request a vacation for a soldier (403 for another soldier) |
 | POST | `RespondToVacationRequest` | Admin+ | Approve/deny a vacation request |
 | POST | `GetVacations` | Self | Get vacations with optional filters (non-admins: forced to own soldier) |
@@ -333,6 +338,7 @@ JSON is camelCase; **datetimes in requests and responses are ISO local wall-cloc
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | POST | `GetAssignments` | Any | Body `{ from, to, missionIds?, soldierIds?, onlyUnfilled?=false }` (range ≤ 62 days, `to > from`, else 400) → `ScheduleInstanceDto[]` sorted by `from`: `{ instanceId, missionId, missionName, from, to, isFilled, requiredCount, assignedCount, assignments[{ soldierMissionId, soldierId, soldierName, missionPositionId, position }], missingPositions[{ missionPositionId, position, missing }] }`. Instances overlapping `[from, to)` via one SQL-filtered query (`FromTime < to && ToTime > from` + optional mission/soldier filters). With `soldierIds`, only instances where any of them is assigned, each with all its assignments. `isFilled` is computed live (`assignedCount >= requiredCount`), not read from the stored `IsFilled` flag |
+| POST | `GetInstances` | Any | (P9) Body `{ instanceIds: number[] }` (1–200, else 400) → `ScheduleInstanceDto[]` (same shape as GetAssignments) in the requested order; repeated IDs once, unknown IDs omitted. The agent's approval cards look shifts up by ID with it |
 | POST | `ValidateAssignments` | Admin+ | Body `{ missionInstanceId, soldierIds:number[] (≤ 1000), missionPositionId?, ignoreSoldierId?, excludeInstanceIds?:number[] }` → `AssignmentValidationDto[]` (one per distinct soldier): `{ soldierId, soldierName, isValid, violations[], warnings[], positionFit:"exact"\|"similar"\|"none", suggestedMissionPositionId?, suggestedPosition?, restBeforeHours?, requiredRestBeforeHours?, restAfterHours?, requiredRestAfterHours?, overlap?{instanceId, missionName, from, to}, vacation?{id, from, to, status:"Pending"\|"Approved"} }`. 404 unknown instance; 400 when `missionPositionId` is not a slot of the instance |
 | POST | `AssignSoldier` | Admin+ | Body `{ missionInstanceId, soldierId, missionPositionId?, allowViolations?=false }` → `GeneralResponse<{ instance (null when blocked), validation }>`. Slot: the requested one, else the best free fit (= ValidateAssignments' `suggestedMissionPositionId`) |
 | POST | `UnassignSoldier` | Admin+ | Body `{ missionInstanceId, soldierId }` → `GeneralResponse<ScheduleInstanceDto>`; 404 if the soldier is not assigned to the instance |
@@ -380,8 +386,12 @@ This is the most complex part of the system (~1700 lines). Two modes:
    - **Over-Qualification Damping** — Optional: penalizes non-exact position matches.
    - **Deterministic Jitter** — Optional: adds deterministic pseudo-random noise for schedule diversity.
 6. Position filling: matches soldiers to required positions (exact first, then similar). Two-pass: strict then relaxed.
-7. Results stored as `SoldierMissionCandidate` in DB + JSON file. Best candidate marked by ValidInstancesCount, EvennessScore.
+7. Results stored as `SoldierMissionCandidate` in DB + JSON file (`AssignmentsResults/<id>.json`). Best candidate marked by ValidInstancesCount, EvennessScore. Only the proposal's own assignments are stored: the existing assignments of the instances the run skipped are not (since P10; before, accepting inserted them a second time).
 8. Evenness score = coefficient of variation of assignment counts across selected soldiers.
+9. Batch runs refuse to start while interactive sessions are active (`AutoAssignConflictException` → 409).
+
+#### Accepting a candidate (`AcceptAssignCandidate`)
+- Loads the candidate's rows, then `CandidateAcceptanceFilter.Select` (pure) leaves out **dangling** rows (the instance, soldier or slot was deleted after the run; candidate rows have no foreign keys, and one such row used to fail the whole acceptance) and **duplicates** (the soldier is already assigned to that instance, or an earlier row has the same soldier and instance). The skipped counts are logged. The remaining rows become `SoldierMission` rows (`IsFilled` recomputed per affected instance), every pending candidate is deleted, and the missions cache reloads. Candidates saved before the fix are therefore safe to accept too.
 
 #### Interactive Mode (`StartInteractiveAutoAssign` / `ContinueInteractiveAutoAssign`)
 - Step-by-step: pauses at each instance (or only faulty ones) to let the user pick soldiers.
@@ -419,6 +429,8 @@ This is the most complex part of the system (~1700 lines). Two modes:
 | `Schedule/MissionCreateInput`, `MissionUpdateInput`, `MissionSlotInput`, `GenerateRangeInput` | `MissionEditService` inputs (mapped from the API request VMs) |
 | `Schedule/CreateMissionResultDto`, `GenerateInstancesResultDto` (+ `TimeSlotDto`), `UpdateInstanceResultDto`, `DeleteInstanceResultDto` | Values of the P4 mission/instance writes |
 | `Services: TimeSlot`, `InstanceGenerationResult`, `SlotCapacity`, `SlotPlan`, `PlannedPlacement`, `BlockingPolicy` | Records of the pure write helpers (generator, slot selector, slot planner, change planner) |
+| `Services: CandidateAcceptance` | Result of `CandidateAcceptanceFilter.Select` (accepted rows, skipped duplicates, skipped dangling) |
+| `AutoAssignConflictException` | Batch auto-assign cannot run while interactive sessions are active (→ 409); derives from `InvalidOperationException` |
 
 ---
 
@@ -446,9 +458,11 @@ This is the most complex part of the system (~1700 lines). Two modes:
 | `04.ShabzakAPI/Auth/Policies.cs` | `AdminOrAbove` / `SuperAdminOnly` policies |
 | `04.ShabzakAPI/Auth/ClaimsPrincipalExtensions.cs` | Claim helpers (`GetUserId`, `GetSoldierId`, `IsAdminOrAbove`, ...) |
 | `04.ShabzakAPI/Auth/TokenRevalidation.cs` | Per-request account check + role refresh |
-| `BL/Services/UserAccountGuard.cs` | Pure account-management guard rules |
-| `04.ShabzakAPI/Controllers/ScheduleController.cs` | `Schedule/GetAssignments`, `ValidateAssignments`, `AssignSoldier`, `UnassignSoldier`, `ReplaceSoldier`, `MoveSoldier` |
+| `BL/Services/UserAccountGuard.cs` | Pure account-management guard rules (`Check`, and `CheckDeleteAll` for the accounts deleted with a soldier) |
+| `04.ShabzakAPI/Controllers/ScheduleController.cs` | `Schedule/GetAssignments`, `GetInstances`, `ValidateAssignments`, `AssignSoldier`, `UnassignSoldier`, `ReplaceSoldier`, `MoveSoldier` |
+| `BL/Services/CandidateAcceptanceFilter.cs` | Pure selection of the auto-assign candidate rows that may be accepted |
 | `04.ShabzakAPI/Controllers/WriteResponseExtensions.cs` | `ExecuteWrite`: write outcome → `GeneralResponse` + status, ID-only log line |
+| `04.ShabzakAPI/Controllers/AccountResponseExtensions.cs` | `AccountError`: account-guard refusal → `GeneralResponse` + 403 / 409 / 404 / 400 (`UserController`, `Soldiers/DeleteSoldier`) |
 | `BL/Services/ScheduleService.cs` | Compact schedule queries, validation data loading, mission summaries, assignment writes, `WriteSync` |
 | `BL/Services/MissionEditService.cs` | Non-destructive mission/instance writes (create, details/slot upsert, generate, add, reschedule, delete) |
 | `BL/Services/AssignmentConstraintEvaluator.cs` | Pure assignment rule evaluation (§2.7 constraint rules) |
@@ -457,14 +471,14 @@ This is the most complex part of the system (~1700 lines). Two modes:
 | `BL/Services/MissionInstanceGenerator.cs` | Pure instance generation (UI-equivalent back-to-back slots) |
 | `BL/Services/MissionSlotPlanner.cs` | Pure position-slot upsert planning |
 | `BL/Services/ScheduleInstanceMapper.cs` | Pure instance → `ScheduleInstanceDto` mapping |
-| `ShabzakAPI.Tests/` | xUnit tests (evaluator, slot selector, change planner, generator, slot planner, date format, mapper, account guard) |
+| `ShabzakAPI.Tests/` | xUnit tests (evaluator, slot selector, change planner, generator, slot planner, date format, mapper, account guard incl. `CheckDeleteAll`, candidate acceptance filter) — 156 tests |
 | `04.ShabzakAPI/Controllers/MissionController.cs` | All mission & auto-assign endpoints, incl. the P4 mission/instance writes |
 | `04.ShabzakAPI/Controllers/SoldiersController.cs` | Soldier CRUD, SetSoldierActive, vacations, summary |
 | `04.ShabzakAPI/Controllers/UserController.cs` | Login, password reset, user creation |
 | `04.ShabzakAPI/Controllers/MetadataController.cs` | Statistics endpoints |
 | `BL/Services/AutoAssignService.cs` | Core scheduling algorithm (batch + interactive) |
 | `BL/Services/MissionService.cs` | Mission CRUD, available soldiers, replacement |
-| `BL/Services/SoldierService.cs` | Soldier CRUD, vacations, summary |
+| `BL/Services/SoldierService.cs` | Soldier CRUD (`DeleteSoldier(id, callerId, callerRole)` also deletes the soldier's login accounts, guard-checked), vacations, summary |
 | `BL/Services/UserService.cs` | Authentication, account creation, Me, account management (GetAllUsers, UpdateUser, DeleteUser, ResetPasswordToDefault) |
 | `BL/Services/MetadataService.cs` | Assignment/hours statistics |
 | `BL/Services/PositionHelper.cs` | Position similarity mapping |
@@ -485,8 +499,8 @@ This is the most complex part of the system (~1700 lines). Two modes:
 
 **XML Comments Added:**
 - ✅ All Controllers (MissionController, SoldiersController, UserController, MetadataController, ScheduleController)
-- ✅ All BL Services (AutoAssignService, MissionService, SoldierService, UserService, MetadataService, MissionInstanceService, MissionPositionService, SoldierMissionService, PositionHelper, ScheduleService, MissionEditService, AssignmentConstraintEvaluator, AssignmentSlotSelector, ScheduleChangePlanner, MissionInstanceGenerator, MissionSlotPlanner, ScheduleInstanceMapper, UserAccountGuard)
-- ✅ Auth (JwtHelper, Policies, ClaimsPrincipalExtensions, TokenRevalidation), WriteResponseExtensions, and the new DTOs (`BL/Models/Users`, `BL/Models/Schedule`) / view models (UpdateUserRequest, GetScheduleAssignmentsRequest, ValidateAssignmentsRequest, ScheduleWriteRequests, MissionEditRequests)
+- ✅ All BL Services (AutoAssignService, MissionService, SoldierService, UserService, MetadataService, MissionInstanceService, MissionPositionService, SoldierMissionService, PositionHelper, ScheduleService, MissionEditService, AssignmentConstraintEvaluator, AssignmentSlotSelector, ScheduleChangePlanner, MissionInstanceGenerator, MissionSlotPlanner, ScheduleInstanceMapper, UserAccountGuard, CandidateAcceptanceFilter)
+- ✅ Auth (JwtHelper, Policies, ClaimsPrincipalExtensions, TokenRevalidation), WriteResponseExtensions, and the new DTOs (`BL/Models/Users`, `BL/Models/Schedule`) / view models (UpdateUserRequest, GetScheduleAssignmentsRequest, GetScheduleInstancesRequest, ValidateAssignmentsRequest, ScheduleWriteRequests, MissionEditRequests), `AutoAssignConflictException`
 - ✅ All Cache classes (SoldiersCache, MissionsCache, UsersCache)
 - ✅ All Extensions (DateTimeExtension, EnumerableExtension, MissionExtension, MissionInstanceExtension, MissionPositionExtension, PositionExtension, SoldierExtension, SoldierMissionExtension, UserExtension)
 - ✅ All Translators (MissionTranslator, SoldierTranslator, MissionInstanceTranslator, MissionPositionTranslator, SoldierMissionTranslator, UserTranslator, UserTokenTranslator, VacationTranslator)

@@ -93,8 +93,16 @@ namespace BL.Services
                 .Where(sm => sm.CandidateId == candidateId)
                 .ToList();
 
+            // Step 1b: Leave out rows that would duplicate an existing assignment or that point at a deleted instance,
+            // soldier or slot (see CandidateAcceptanceFilter).
+            var acceptance = SelectAcceptableCandidates(db, candidates);
+            if (acceptance.SkippedDuplicates + acceptance.SkippedDangling > 0)
+            {
+                Logger.Log($"AcceptAssignCandidate {candidateId}: {acceptance.Accepted.Count} of {candidates.Count} row(s) accepted; skipped {acceptance.SkippedDuplicates} duplicate(s) of existing assignments and {acceptance.SkippedDangling} row(s) of deleted instances, soldiers or slots");
+            }
+
             // Step 2: Convert each candidate into a real SoldierMission assignment and persist.
-            var soldierMissions = candidates
+            var soldierMissions = acceptance.Accepted
                 .Select(sm => new SoldierMission
                 {
                     Id = 0,
@@ -108,7 +116,7 @@ namespace BL.Services
 
             // Step 3: Recalculate IsFilled flag for each affected instance
             // (checks if assigned count meets required positions).
-            var instances = candidates
+            var instances = acceptance.Accepted
                 .Select(c => c.MissionInstanceId)
                 .Distinct()
                 .ToList();
@@ -128,6 +136,23 @@ namespace BL.Services
             db.SaveChanges();
             reload.Wait();
             return _missionsCache.GetMissions();
+        }
+
+        private static CandidateAcceptance SelectAcceptableCandidates(ShabzakDB db, IReadOnlyList<SoldierMissionCandidate> candidates)
+        {
+            var instanceIds = candidates.Select(c => c.MissionInstanceId).Distinct().ToList();
+            var soldierIds = candidates.Select(c => c.SoldierId).Distinct().ToList();
+            var slotIds = candidates.Select(c => c.MissionPositionId).Distinct().ToList();
+            var existingInstanceIds = db.MissionInstances.Where(mi => instanceIds.Contains(mi.Id)).Select(mi => mi.Id).ToHashSet();
+            var existingSoldierIds = db.Soldiers.Where(s => soldierIds.Contains(s.Id)).Select(s => s.Id).ToHashSet();
+            var existingSlotIds = db.MissionPositions.Where(p => slotIds.Contains(p.Id)).Select(p => p.Id).ToHashSet();
+            var existingAssignments = db.SoldierMission
+                .Where(sm => instanceIds.Contains(sm.MissionInstanceId))
+                .Select(sm => new { sm.SoldierId, sm.MissionInstanceId })
+                .AsEnumerable()
+                .Select(sm => (sm.SoldierId, sm.MissionInstanceId))
+                .ToHashSet();
+            return CandidateAcceptanceFilter.Select(candidates, existingInstanceIds, existingSoldierIds, existingSlotIds, existingAssignments);
         }
 
         private void ReloadCache()
@@ -179,7 +204,7 @@ namespace BL.Services
             // interactive sessions (only one mode can run at a time), then delegates to AutoAssignInternal.
             if (_interactiveSessions.Count > 0)
             {
-                throw new InvalidOperationException("Cannot run batch auto-assign while interactive sessions are active.");
+                throw new AutoAssignConflictException("Cannot run batch auto-assign while interactive sessions are active.");
             }
             _batchRunning = true;
             try
@@ -696,8 +721,10 @@ namespace BL.Services
             // Goal: After all instances have been processed, validate the full schedule,
             // persist it as a candidate in the DB, and save a JSON snapshot to disk.
 
-            // Step 1: Collect all assignments across all instances in this schedule.
+            // Step 1: Collect the assignments this schedule proposes. Skipped instances keep their existing (accepted)
+            // assignments in memory; they are not part of the proposal and must not be inserted again on acceptance.
             var scheduleAssignments = ctx.AllInstances
+                .Where(mi => !ctx.SkippedInstanceIds.Contains(mi.Id))
                 .SelectMany(mi => mi.Soldiers ?? new List<SoldierMission>())
                 .ToList();
 

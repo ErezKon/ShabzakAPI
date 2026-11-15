@@ -130,11 +130,19 @@ namespace BL.Services
         }
 
         /// <summary>
-        /// Deletes a soldier and all associated data (assignments, vacations) via cascade delete.
-        /// Reloads the soldiers cache after deletion.
+        /// Deletes a soldier and all associated data (assignments, vacations) via cascade delete, together with the
+        /// soldier's login account(s): <c>Users.SoldierId</c> has no FK, so they are deleted here, in the same SaveChanges.
+        /// The accounts are deleted under the <see cref="UserAccountGuard"/> rules for the caller; when the caller may not
+        /// delete one of them (a SuperAdmin account for an Admin, the caller's own account, the last enabled SuperAdmin),
+        /// nothing is deleted. Removes the accounts from the users cache and reloads the soldiers cache afterwards.
         /// </summary>
         /// <param name="id">The ID of the soldier to delete.</param>
-        public void DeleteSoldier(int id)
+        /// <param name="callerId">The user ID of the caller (for the account guard).</param>
+        /// <param name="callerRole">The role of the caller.</param>
+        /// <returns>The IDs of the deleted login accounts (empty when the soldier had none).</returns>
+        /// <exception cref="ArgumentException">Unknown soldier.</exception>
+        /// <exception cref="UserAccountException">The caller may not delete the soldier's login account.</exception>
+        public List<int> DeleteSoldier(int id, int callerId, UserRole callerRole)
         {
             try
             {
@@ -144,11 +152,37 @@ namespace BL.Services
                 {
                     throw new ArgumentException("Can't find soldier.");
                 }
+                var accounts = db.Users.Where(u => u.SoldierId == id).ToList();
+                if (accounts.Count > 0)
+                {
+                    var enabledSuperAdmins = db.Users.Count(u => u.Role == DataLayer.Models.UserRole.SuperAdmin && u.Enabled);
+                    var guard = UserAccountGuard.CheckDeleteAll(callerId, callerRole,
+                        accounts.Select(a => (a.Id, (UserRole)(int)a.Role, a.Enabled)), enabledSuperAdmins);
+                    if (!guard.IsAllowed)
+                    {
+                        throw new UserAccountException(guard.Outcome, $"The soldier's login account cannot be deleted: {guard.Message}");
+                    }
+                    db.Users.RemoveRange(accounts);
+                }
                 db.Soldiers.Remove(soldier);
                 // FIX: SaveChanges BEFORE ReloadAsync. The original reloaded the cache
                 // before committing the delete — the soldier was still in DB during reload.
                 db.SaveChanges();
+                var usersCache = UsersCache.GetInstance();
+                foreach (var account in accounts)
+                {
+                    usersCache.RemoveUser(account.Id);
+                }
                 SoldiersCache.ReloadAsync();
+                var deletedAccounts = accounts.Select(a => a.Id).ToList();
+                Logger.Log($"Soldier ID={id} deleted by user ID={callerId}" +
+                    (deletedAccounts.Count > 0 ? $", with login account ID(s) {string.Join(", ", deletedAccounts)}" : ""));
+                return deletedAccounts;
+            }
+            catch (UserAccountException ex)
+            {
+                Logger.Log($"Deleting soldier ID={id} refused for user ID={callerId}: {ex.Message}");
+                throw;
             }
             catch (Exception ex)
             {

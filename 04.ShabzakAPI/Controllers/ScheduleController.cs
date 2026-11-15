@@ -48,6 +48,23 @@ namespace ShabzakAPI.Controllers
         }
 
         /// <summary>
+        /// Looks instances up by ID (1 to 200), with the same shape as GetAssignments, in the requested order; unknown IDs are
+        /// omitted. Available to any authenticated user (the same data as GetAssignments).
+        /// </summary>
+        [HttpPost("GetInstances")]
+        public ActionResult<List<ScheduleInstanceDto>> GetInstances(GetScheduleInstancesRequest request)
+        {
+            try
+            {
+                return _scheduleService.GetInstances(request.InstanceIds);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Validates each soldier for one mission instance and returns violations (INACTIVE, ALREADY_ASSIGNED, OVERLAP,
         /// ON_VACATION, INSTANCE_FULL, POSITION_MISMATCH, REST_BEFORE, REST_AFTER, NOT_FOUND), warnings (SIMILAR_POSITION),
         /// the suggested slot and rest details. Admin or SuperAdmin only.

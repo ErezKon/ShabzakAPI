@@ -227,19 +227,26 @@ namespace ShabzakAPI.Controllers
         /// fills mission instances, and stores candidates in the DB for later acceptance.
         /// </summary>
         /// <param name="model">Date range, selected missions/soldiers, max schedules, and scoring options.</param>
-        /// <returns>List of candidate schedules with validation results. The best is marked with IsBestCandidate.</returns>
+        /// <returns>List of candidate schedules with validation results. The best is marked with IsBestCandidate.
+        /// 409 <c>{ message }</c> while interactive auto-assign sessions are active.</returns>
         [HttpPost("AutoAssign")]
         [Authorize(Policy = Policies.AdminOrAbove)]
-        public List<AssignmentValidationModel> AutoAssign(AutoAssignModel model)
+        public ActionResult<List<AssignmentValidationModel>> AutoAssign(AutoAssignModel model)
         {
-            var ret = _autoAssignService.AutoAssign(
-                model.StartDate,
-                model.EndDate,
-                model.Missions,
-                model.Soldiers,
-                model.MaxSchedules,
-                model.ScoringOptions);
-            return ret;
+            try
+            {
+                return _autoAssignService.AutoAssign(
+                    model.StartDate,
+                    model.EndDate,
+                    model.Missions,
+                    model.Soldiers,
+                    model.MaxSchedules,
+                    model.ScoringOptions);
+            }
+            catch (AutoAssignConflictException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         /// <summary>

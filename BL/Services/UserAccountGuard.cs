@@ -111,6 +111,33 @@ namespace BL.Services
             return AccountGuardResult.Allowed;
         }
 
+        /// <summary>
+        /// Checks deleting several accounts in one operation (the login accounts of a deleted soldier): each one must be
+        /// deletable by the caller, and the enabled SuperAdmins deleted earlier in the list no longer count.
+        /// </summary>
+        /// <param name="enabledSuperAdminCount">Number of enabled SuperAdmin accounts before the deletion.</param>
+        public static AccountGuardResult CheckDeleteAll(
+            int callerId,
+            UserRole callerRole,
+            IEnumerable<(int Id, UserRole Role, bool Enabled)> targets,
+            int enabledSuperAdminCount)
+        {
+            var remaining = enabledSuperAdminCount;
+            foreach (var target in targets)
+            {
+                var result = Check(callerId, callerRole, target.Id, target.Role, target.Enabled, new AccountChange(Delete: true), remaining);
+                if (!result.IsAllowed)
+                {
+                    return result;
+                }
+                if (target.Role == UserRole.SuperAdmin && target.Enabled)
+                {
+                    remaining--;
+                }
+            }
+            return AccountGuardResult.Allowed;
+        }
+
         private static AccountGuardResult Fail(AccountGuardOutcome outcome, string message) => new(outcome, message);
     }
 }

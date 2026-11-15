@@ -261,16 +261,27 @@ namespace _04.ShabzakAPI.Controllers
                 () => _soldierService.SetActive(request.SoldierId, request.Active));
 
         /// <summary>
-        /// Deletes a soldier and all their associated assignments (cascade delete).
+        /// Deletes a soldier and all their associated assignments and vacations (cascade delete), together with the
+        /// soldier's login account (under the <see cref="UserAccountGuard"/> rules for the caller).
         /// </summary>
         /// <param name="soldierId">The ID of the soldier to delete.</param>
-        /// <returns>The deleted soldier's ID.</returns>
+        /// <returns>
+        /// The deleted soldier's ID. When the caller may not delete the soldier's login account (deleted with the soldier),
+        /// nothing is deleted: 403 / 400 / 409 with a <see cref="GeneralResponse{T}"/> error, as on the account endpoints.
+        /// </returns>
         [HttpPost("DeleteSoldier")]
         [Authorize(Policy = Policies.AdminOrAbove)]
-        public int DeleteSoldier(int soldierId)
+        public ActionResult<int> DeleteSoldier(int soldierId)
         {
-            _soldierService.DeleteSoldier(soldierId);
-            return soldierId;
+            try
+            {
+                _soldierService.DeleteSoldier(soldierId, User.GetUserId() ?? 0, User.GetRole());
+                return soldierId;
+            }
+            catch (UserAccountException ex)
+            {
+                return this.AccountError<int>(ex);
+            }
         }
 
         /// <summary>

@@ -2,9 +2,9 @@
 
 > Backend Web API for **Shabzak (שבצ"ק)** — a military duty-scheduling / assignment system that assigns soldiers to mission time-slots, with both manual and automatic (fairness-scored) assignment.
 
-`Shabzak` (Angular UI) is the companion frontend. `ShabzakSQL` (SQL Server) is the database. The three are orchestrated by the root `../docker-compose.yml`.
+`Shabzak` (Angular UI) is the companion frontend, `ShabzakSQL` (SQL Server) the database and `ShabzakAgent` the AI chat assistant (it calls this API with each user's JWT). The four are orchestrated by the root `../docker-compose.yml`.
 
-> **Security refactored:** JWT Bearer authentication now protects all endpoints (except `/Login`). Secrets (DB connection string, AES key, JWT signing key) are read from `appsettings.json` / environment variables — see [Configuration](#configuration). CORS is restricted to configured origins, and Swagger is gated to Development only.
+> **Security refactored:** JWT Bearer authentication now protects all endpoints (except `/Login` and `/health`). Secrets (DB connection string, AES key, JWT signing key) are read from `appsettings.json` / user-secrets / environment variables — see [Configuration](#configuration). CORS allows the origins in `Cors:AllowedOrigins` (default `*`); Swagger is currently enabled in every environment.
 
 ---
 
@@ -181,7 +181,7 @@ All routes are `api/[controller]/[action]`. Bodies are JSON; several actions tak
 ### `api/Metadata`
 `GetAssignmentsPerSoldiers` · `GetHoursPerSoldiers` · `GetAssignmentsBreakdownPerSoldiers`
 
-Swagger UI is exposed at `/swagger` (**Development environment only**).
+Swagger UI is exposed at `/swagger` (currently in every environment).
 
 > All endpoints except `Login` require a valid JWT in the `Authorization: Bearer <token>` header.
 
@@ -193,31 +193,31 @@ All secrets are externalized to `appsettings.json` or environment variables. **N
 
 | Key                           | Required | Description                                                        |
 | -------------------------------| ----------| --------------------------------------------------------------------|
-| `ConnectionStrings:ShabzakDB` | **Yes**  | SQL Server connection string                                       |
-| `Jwt:Key`                     | **Yes**  | HMAC-SHA256 signing key (≥ 32 chars)                               |
+| `ConnectionStrings:ShabzakDB` | **Yes**  | SQL Server connection string (`appsettings.json` holds a placeholder; local dev: `dotnet user-secrets`) |
+| `Jwt:Key`                     | Recommended | HMAC-SHA256 signing key (≥ 32 chars). Empty: a random key per start, so tokens die on every restart |
 | `Jwt:Issuer`                  | No       | Token issuer claim (default: `ShabzakAPI`)                         |
-| `Jwt:Audience`                | No       | Token audience claim (default: `ShabzakClient`)                    |
+| `Jwt:Audience`                | No       | Token audience claim (default: `ShabzakApp`)                       |
 | `Jwt:ExpiryMinutes`           | No       | Token lifetime in minutes (default: `480`)                         |
-| `Aes:Key`                     | **Yes**  | AES-256 encryption key for PII at rest                             |
-| `Aes:LegacyIV`                | No       | Legacy static IV for decrypting pre-existing data                  |
-| `Cors:AllowedOrigins`         | No       | Comma-separated allowed origins (default: `http://localhost:5230`) |
+| `Encryption:AesKey`           | **Yes**  | AES-256 encryption key for PII at rest                             |
+| `Encryption:AesIV`            | **Yes**  | Legacy static IV for decrypting pre-existing data                  |
+| `Cors:AllowedOrigins`         | No       | Comma-separated allowed origins (default: `*`)                     |
 
 ### Environment variable overrides
 
 ASP.NET Core supports `__` (double-underscore) notation for nested keys:
 
 ```bash
-export ConnectionStrings__ShabzakDB="Server=...;User ID=sa;Password=...;Initial Catalog=ShabzakDB;"
-export Jwt__Key="YourAtLeast32CharacterLongSecretKeyHere!!"
+export ConnectionStrings__ShabzakDB="Server=...;User ID=...;Password=...;Initial Catalog=ShabzakDB;"
+export Jwt__Key="<at least 32 random characters, e.g. openssl rand -base64 32>"
 ```
 
-The `docker-compose.yml` injects these from a `.env` file. Copy `.env.example` to `.env` and fill in real values.
+The root `docker-compose.yml` sets both for the container from the root `.env` file (copy the root `.env.example`): `SHABZAK_DB_CONNECTION_STRING` → `ConnectionStrings__ShabzakDB` (required; compose refuses to start without it) and `JWT_KEY` → `Jwt__Key` (when empty, `entrypoint.sh` generates a key on every start, which logs everyone out).
 
 ### Other settings
 
 - **Local DB toggle** — set `DataLayer.DbFactory.UseLocal = true` to use a local SQLite file (`shabzak_local.db`) instead of SQL Server.
-- **CORS** — restricted to origins listed in `Cors:AllowedOrigins` (configurable).
-- **Swagger** — only available when `ASPNETCORE_ENVIRONMENT=Development`.
+- **CORS** — the origins listed in `Cors:AllowedOrigins` (default `*`). The containerized UI calls the API on its own origin (its nginx proxies `/api/`), so it needs none.
+- **Swagger** — currently enabled in every environment (the Development-only gate in `Program.cs` is commented out).
 - **Logs** — written to `Logs/<timestamp>.log` relative to the working directory (mounted to the host in `docker-compose.yml`).
 - **Auto-assign artifacts** — written to `AssignmentsResults/<guid>.json` relative to the working directory.
 
@@ -225,15 +225,16 @@ The `docker-compose.yml` injects these from a `.env` file. Copy `.env.example` t
 
 ### Run everything with Docker (recommended)
 
-From the repository root (`../`):
+From the workspace root (`../`, next to `docker-compose.yml`):
 
 ```bash
-docker-compose up --build
+cp .env.example .env     # fill in SHABZAK_DB_CONNECTION_STRING, LLM_API_KEY and (recommended) JWT_KEY
+docker compose up --build
 ```
 
-This starts `shabzak-api` (host port **5231** → container 8080), `shabzak-ui` (host **5230**), and `shabzak-sql` (host **1433**).
+This starts `shabzak-api` (host port **5231** → container 8080), `shabzak-ui` (host **5230**: the app, with `/api/` and `/agent/` proxied by its nginx), `shabzak-agent` (host **5232** → 3000, the AI chat assistant) and `shabzak-sql` (host **1433**). Open the UI at `http://<host>:5230`; it reaches this API through its own `/api/` path.
 
-> Create a `.env` file at the repo root (copy from `.env.example`) with `MSSQL_SA_PASSWORD` and `JWT_KEY`.
+> The root `.env` holds secrets: never commit it. Compose refuses to start while `SHABZAK_DB_CONNECTION_STRING` or `LLM_API_KEY` is empty. The SQL container's `sa` password is still written in `docker-compose.yml` (`MSSQL_SA_PASSWORD`); use the same password in the connection string if the API uses that container.
 
 ### Run the API locally
 
@@ -246,7 +247,7 @@ dotnet build ShabzakAPI.sln -c Debug
 dotnet run --project 04.ShabzakAPI/04.ShabzakAPI.csproj
 ```
 
-On startup the app reads configuration, configures JWT + AES + DB, runs `Database.EnsureCreated()`, primes the three caches, then serves the API (Swagger at `/swagger` in Development only).
+On startup the app reads configuration, configures JWT + AES + DB, runs `Database.EnsureCreated()`, primes the three caches, then serves the API (Swagger at `/swagger`). Run it with `dotnet run --launch-profile http` (http://localhost:5165) when the UI dev server or the AI agent use it: the `https` profile redirects that URL to https, which the agent refuses.
 
 To seed data in development, use the `GET api/Soldiers/LoadCSV` endpoint — it reads from `DataLayer/soldiers.txt` relative to the project directory. **This endpoint is blocked in production.**
 
