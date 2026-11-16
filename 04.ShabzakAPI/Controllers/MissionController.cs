@@ -38,12 +38,13 @@ namespace ShabzakAPI.Controllers
 
         /// <summary>
         /// Retrieves all missions with their instances, assigned soldiers, and position requirements.
+        /// Non-admins get the assigned soldiers without phone and personal number (like <c>Soldiers/GetSoldiers</c>).
         /// </summary>
         /// <returns>A list of all missions with full nested data.</returns>
         [HttpGet("GetMissions")]
         public List<Mission> GetMissions()
         {
-            var ret = _missionService.GetMissions();
+            var ret = _missionService.GetMissions(includeContactDetails: User.IsAdminOrAbove());
             return ret;
         }
 

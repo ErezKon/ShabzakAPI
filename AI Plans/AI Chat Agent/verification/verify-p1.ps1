@@ -47,7 +47,13 @@ if ($notForbidden) { Check 'Regular non-403 admin endpoints' '' ($notForbidden -
 
 # --- Regular: reads -> 200 ----------------------------------------------------
 $today = (Get-Date).Date
-Check 'Regular GetMissions' 200 (Invoke-Api -Path '/api/Mission/GetMissions' -Token $RG).Status
+function AssignedSoldiers($missions) { @($missions | ForEach-Object { $_.missionInstances } | ForEach-Object { $_.soldierMissions } | ForEach-Object { $_.soldier } | Where-Object { $_ }) }
+$r = Invoke-Api -Path '/api/Mission/GetMissions' -Token $RG
+Check 'Regular GetMissions' 200 $r.Status
+$assignedForRegular = AssignedSoldiers $r.Body
+Check 'Regular GetMissions: assigned soldiers listed, none with phone/PN' 'True/0' "$($assignedForRegular.Count -gt 0)/$(@($assignedForRegular | Where-Object { $_.phone -or $_.personalNumber }).Count)"
+$assignedForAdmin = AssignedSoldiers (Invoke-Api -Path '/api/Mission/GetMissions' -Token $AD).Body
+Check 'Admin GetMissions still has phones/PN' "$($assignedForAdmin.Count)/$($assignedForAdmin.Count)" "$(@($assignedForAdmin | Where-Object { $_.phone }).Count)/$(@($assignedForAdmin | Where-Object { $_.personalNumber }).Count)"
 Check 'Regular GetMissionInstances' 200 (Invoke-Api -Path '/api/Mission/GetMissionInstances?missionId=1' -Method POST -Token $RG).Status
 Check 'Regular GetMissionInstancesInRange' 200 (Invoke-Api -Path '/api/Mission/GetMissionInstancesInRange' -Method POST -Token $RG -Body @{ from = $today.ToString('s'); to = $today.AddDays(1).ToString('s'); fullDay = $true; unassignedOnly = $false }).Status
 $r = Invoke-Api -Path '/api/Soldiers/GetSoldiers?reloadCache=true' -Token $RG

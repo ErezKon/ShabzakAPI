@@ -84,7 +84,14 @@ namespace BL.Services
         {
             // Goal: Promote a candidate schedule from temporary storage (SoldierMissionCandidates)
             // into actual assignments (SoldierMission), then clean up all candidates.
+            lock (ScheduleService.WriteSync)
+            {
+                return AcceptAutoAssignCandidateLocked(candidateId);
+            }
+        }
 
+        private List<Translators.Models.Mission> AcceptAutoAssignCandidateLocked(string candidateId)
+        {
             using var db = DbFactory.Create();
 
             // Step 1: Load all candidate records and filter to the accepted schedule by GUID.
@@ -131,10 +138,10 @@ namespace BL.Services
 
             // Step 4: Remove ALL candidate records (not just the accepted one)
             // since only one schedule can be accepted, and reload the missions cache.
-            var reload = MissionsCache.ReloadAsync();
             db.SoldierMissionCandidates.RemoveRange(allCandidates);
             db.SaveChanges();
-            reload.Wait();
+            SoldiersCache.ReloadAsync();
+            MissionsCache.ReloadAsync().Wait();
             return _missionsCache.GetMissions();
         }
 

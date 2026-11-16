@@ -26,8 +26,10 @@ namespace BL.Services
         /// Retrieves all missions with their instances, assigned soldiers, and position requirements.
         /// Data is loaded from DB, translated to BL models, and decrypted.
         /// </summary>
+        /// <param name="includeContactDetails">False for non-admin callers: the assigned soldiers' phone and personal number
+        /// are blanked (see <see cref="ContactDetailsRedaction"/>).</param>
         /// <returns>List of all missions with full nested data.</returns>
-        public List<Mission> GetMissions()
+        public List<Mission> GetMissions(bool includeContactDetails = true)
         {
             using var db = DataLayer.DbFactory.Create();
             var temp = db.Missions
@@ -40,7 +42,7 @@ namespace BL.Services
 
             var ret = temp.Select(m => m.Decrypt().ToBL(includeSoldier: true))
                 .ToList();
-            return ret;
+            return includeContactDetails ? ret : ContactDetailsRedaction.RemoveFromAssignedSoldiers(ret);
         }
 
         /// <summary>

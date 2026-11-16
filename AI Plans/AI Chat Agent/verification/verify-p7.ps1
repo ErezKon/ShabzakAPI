@@ -130,6 +130,28 @@ try {
     for ($i = 0; $i -lt 15; $i++) { $resumed = Invoke-Chat '/api/chat/stream' @{ threadId = $T3; message = 'שוב' } $AD; if ($resumed.Status -ne 409) { break }; Start-Sleep -Milliseconds 200 }
     Check 'After the client left, the thread is free again (the run was stopped)' '200/echo: שוב' "$($resumed.Status)/$($resumed.Final.message)"
 
+    # --- Role change: a thread is not continued under another role (review 2026-11-16) ----------------------------------------
+    $countBefore = (VacationsOf8).Count
+    $ask = Invoke-Chat '/api/chat/stream' @{ message = "CALL request_vacation {`"soldierId`":8,`"from`":`"$d3`",`"to`":`"$d3`"}" } $AD
+    $T4 = $ask.ThreadId
+    $demoted = $false
+    try {
+        $demoted = (Invoke-Api -Path '/api/User/UpdateUser' -Method POST -Token $SA -Body @{ userId = 2; role = 0 }).Status -eq 200
+        $asRegular = New-DevJwt -UserId 2 -Role Admin -SoldierId 2 -Minutes 60
+        $next = Invoke-Chat '/api/chat/stream' @{ threadId = $T4; message = 'עוד שאלה' } $asRegular
+        $resume = Invoke-Chat '/api/chat/resume' @{ threadId = $T4; decisions = @(@{ type = 'approve' }) } $asRegular
+        $countNow = @((Invoke-Api -Path '/api/Soldiers/GetVacations' -Method POST -Token $SA -Body @{ soldierId = 8 }).Body).Count
+        Check 'Role change (Admin -> Regular): stream and resume on the old thread -> 404 thread_not_found, nothing written' "True/404/thread_not_found/404/thread_not_found/$countBefore" "$demoted/$($next.Status)/$($next.Json.code)/$($resume.Status)/$($resume.Json.code)/$countNow"
+        $fresh = Invoke-Chat '/api/chat/stream' @{ message = 'שלום' } $asRegular
+        Check 'Role change: a new thread works with the new role' '200/True/echo: שלום' "$($fresh.Status)/$($fresh.ThreadId -ne $T4)/$($fresh.Final.message)"
+    }
+    finally {
+        if ($demoted) { $null = Invoke-Api -Path '/api/User/UpdateUser' -Method POST -Token $SA -Body @{ userId = 2; role = 1 } }
+    }
+    $asAdmin = New-DevJwt -UserId 2 -Role Admin -SoldierId 2 -Minutes 60
+    $back = Invoke-Chat '/api/chat/resume' @{ threadId = $T4; decisions = @(@{ type = 'reject' }) } $asAdmin
+    Check 'Back to Admin: the thread is usable again (its card rejected, nothing written)' "200/True/$countBefore" "$($back.Status)/$($back.Final.message -match 'REJECTED: the user did not approve request_vacation')/$((VacationsOf8).Count)"
+
     # --- Reset ---------------------------------------------------------------------------------------------------------
     $r = Invoke-Chat '/api/chat/reset' @{ threadId = $T2 } $RG
     Check "Reset of another user's thread -> 403" '403/forbidden' "$($r.Status)/$($r.Json.code)"
